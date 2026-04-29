@@ -1,11 +1,15 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowRight } from '@repo/ui/lucide-react'
-
-export const Route = createFileRoute('/')({
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight } from "@repo/ui/lucide-react";
+import { initWidget } from "@repo/widget";
+import { useEffect } from "react";
+export const Route = createFileRoute("/")({
   component: HomePage,
-})
+});
 
 function HomePage() {
+  useEffect(() => {
+    return initWidget().unmount;
+  }, []);
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-6 py-20 text-center">
       <h1 className="font-display text-5xl md:text-7xl font-bold text-cream mb-4">
@@ -30,5 +34,5 @@ function HomePage() {
         </Link>
       </div>
     </div>
-  )
+  );
 }

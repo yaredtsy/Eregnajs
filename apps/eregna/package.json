@@ -15,6 +15,7 @@
     "check": "biome check"
   },
   "dependencies": {
+    "@repo/widget": "workspace:*",
     "@repo/ui": "workspace:*",
     "@supabase/supabase-js": "^2.105.1",
     "@tanstack/react-devtools": "latest",

@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@layer components {
+  .eregna-widget-root {
+    @apply pointer-events-none;
+  }
+
+  .eregna-float-btn {
+    @apply pointer-events-auto fixed bottom-5 right-5 z-10 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full border-0 bg-indigo-600 text-white shadow-lg transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400;
+  }
+
+  .eregna-float-btn__icon {
+    @apply flex items-center justify-center;
+  }
+
+  .eregna-chat-panel {
+    @apply pointer-events-auto fixed bottom-24 right-5 z-10 flex w-[min(100vw-2.5rem,22rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl;
+  }
+
+  .eregna-chat-panel__header {
+    @apply flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3;
+  }
+
+  .eregna-chat-panel__title {
+    @apply m-0 text-base font-semibold text-slate-900;
+  }
+
+  .eregna-chat-panel__close {
+    @apply flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-2xl leading-none text-slate-600 hover:bg-slate-200 hover:text-slate-900;
+  }
+
+  .eregna-chat-panel__body {
+    @apply min-h-[12rem] flex-1 p-4;
+  }
+
+  .eregna-chat-panel__placeholder {
+    @apply m-0 text-sm text-slate-500;
+  }
+
+  .sr-only {
+    @apply absolute h-px w-px overflow-hidden whitespace-nowrap border-0 p-0;
+    clip: rect(0, 0, 0, 0);
+  }
+}

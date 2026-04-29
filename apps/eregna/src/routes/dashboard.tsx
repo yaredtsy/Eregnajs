@@ -1,3 +1,4 @@
+import { initWidget } from '@repo/widget'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { useAuth } from '#/lib/auth'
@@ -16,6 +17,11 @@ function DashboardPage() {
       navigate({ to: '/login' })
     }
   }, [user, loading, navigate])
+
+  useEffect(() => {
+    if (loading || !user) return
+    return initWidget().unmount
+  }, [loading, user])
 
   async function signOut() {
     await supabase.auth.signOut()
