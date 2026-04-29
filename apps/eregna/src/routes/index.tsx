@@ -16,7 +16,7 @@ function HomePage() {
         <span className="text-gold">Eregna</span>
       </h1>
       <p className="text-cream/70 font-body text-lg md:text-xl max-w-xl mb-10">
-        Sign in with Google to open your dashboard.
+        Sign in with email and password or Google to manage your agents.
       </p>
       <div className="flex flex-wrap justify-center gap-4">
         <Link

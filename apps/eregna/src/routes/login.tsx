@@ -7,10 +7,16 @@ export const Route = createFileRoute('/login')({
   component: LoginPage,
 })
 
+type Mode = 'sign-in' | 'sign-up'
+
 function LoginPage() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
+  const [mode, setMode] = useState<Mode>('sign-in')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -21,6 +27,7 @@ function LoginPage() {
 
   async function signInWithGoogle() {
     setError(null)
+    setInfo(null)
     setBusy(true)
     const origin = window.location.origin
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -32,6 +39,37 @@ function LoginPage() {
     setBusy(false)
     if (oauthError) {
       setError(oauthError.message)
+    }
+  }
+
+  async function submitEmailAuth() {
+    setError(null)
+    setInfo(null)
+    setBusy(true)
+    try {
+      if (mode === 'sign-up') {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        })
+        if (signUpError) throw signUpError
+        setInfo('Check your email to confirm your account, then sign in.')
+        setPassword('')
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        })
+        if (signInError) throw signInError
+        navigate({ to: '/dashboard' })
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong')
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -47,15 +85,106 @@ function LoginPage() {
     <div className="min-h-[70vh] flex items-center justify-center px-6 py-16">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm">
         <h1 className="font-display text-3xl font-semibold text-cream mb-2 text-center">
-          Log in
+          {mode === 'sign-in' ? 'Log in' : 'Create account'}
         </h1>
-        <p className="text-muted-foreground text-sm text-center mb-8">
-          Continue with your Google account (only Google is enabled).
+        <p className="text-muted-foreground text-sm text-center mb-6">
+          Use email and password, or continue with Google.
         </p>
 
-        {error ? (
-          <p className="text-destructive text-sm text-center mb-4">{error}</p>
-        ) : null}
+        <div className="flex rounded-xl border border-border p-1 mb-6 bg-background/50">
+          <button
+            type="button"
+            onClick={() => {
+              setMode('sign-in')
+              setError(null)
+              setInfo(null)
+            }}
+            className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
+              mode === 'sign-in' ? 'bg-card text-cream shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('sign-up')
+              setError(null)
+              setInfo(null)
+            }}
+            className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
+              mode === 'sign-up' ? 'bg-card text-cream shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Sign up
+          </button>
+        </div>
+
+        <form
+          className="space-y-4 mb-6"
+          onSubmit={(e) => {
+            e.preventDefault()
+            void submitEmailAuth()
+          }}
+        >
+          <div>
+            <label htmlFor="login-email" className="block text-xs font-medium text-muted-foreground mb-1">
+              Email
+            </label>
+            <input
+              id="login-email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+            />
+          </div>
+          <div>
+            <label htmlFor="login-password" className="block text-xs font-medium text-muted-foreground mb-1">
+              Password
+            </label>
+            <input
+              id="login-password"
+              type="password"
+              autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+            />
+          </div>
+
+          {error ? (
+            <p className="text-destructive text-sm" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {info ? (
+            <p className="text-emerald-600 dark:text-emerald-400 text-sm" role="status">
+              {info}
+            </p>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full rounded-xl bg-gradient-to-r from-copper to-copper-dark px-4 py-2.5 text-sm font-semibold text-charcoal transition hover:opacity-95 disabled:opacity-50"
+          >
+            {busy ? 'Please wait…' : mode === 'sign-in' ? 'Sign in' : 'Create account'}
+          </button>
+        </form>
+
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center" aria-hidden>
+            <span className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase tracking-wide">
+            <span className="bg-card px-2 text-muted-foreground">Or</span>
+          </div>
+        </div>
 
         <button
           type="button"

@@ -1,159 +1,101 @@
-# Turborepo starter
+# Eregna
 
-This Turborepo starter is maintained by the Turborepo core team.
+Monorepo for the Eregna product: a **TanStack Start** dashboard (`apps/eregna`), a **Bun + Hono** API (`apps/api`), shared **UI** and **DB** packages, and **Supabase** for auth and Postgres.
 
-## Using this example
+## Prerequisites
 
-Run the following command:
+- **Node** 18+ and **pnpm** 9 (`packageManager` is pinned in `package.json`)
+- **Bun** for the API ([install Bun](https://bun.sh/))
+- **Docker Desktop** if you use **local** Supabase (`supabase start` from the repo root)
 
-```sh
-npx create-turbo@latest
-```
+## Quick start
 
-## What's inside?
-
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+Install dependencies from the repository root:
 
 ```sh
-cd my-turborepo
-turbo build
+pnpm install
 ```
 
-Without global `turbo`, use your package manager:
+### Environment variables
+
+| App | File | Purpose |
+|-----|------|--------|
+| Dashboard | `apps/eregna/.env` | Supabase **anon** URL + key for the browser; optional `VITE_EREGNA_API_URL` |
+| API | `apps/api/.env` | Supabase **URL** + **service role** key (server only; never expose to the client) |
+
+Copy the examples and fill in real values:
 
 ```sh
-cd my-turborepo
-npx turbo build
-pnpm dlx turbo build
-pnpm exec turbo build
+cp apps/eregna/.env.example apps/eregna/.env
+cp apps/api/.env.example apps/api/.env
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+**Dashboard (`apps/eregna/.env`)**
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+- `VITE_EREGNA_SUPABASE_URL` / `VITE_EREGNA_SUPABASE_ANON_KEY` — project URL and anon key (or the legacy `VITE_SUPABASE_*` names; both are supported in code).
+- `VITE_EREGNA_API_URL` — base URL of the API (default `http://localhost:4000` if omitted).
+
+**API (`apps/api/.env`)**
+
+- `EREGNA_SUPABASE_URL` — same Supabase URL as the dashboard (e.g. `http://127.0.0.1:54321` when running Supabase locally).
+- `EREGNA_SUPABASE_SERVICE_ROLE_KEY` — service role key (from Supabase dashboard or `supabase status` when local).
+- `EREGNA_CORS_ORIGINS` — comma-separated origins allowed to call the API (include `http://localhost:3000` for local UI).
+
+In Supabase, enable **Email** (and optionally **Google**) under Authentication → Providers, and add redirect URLs such as `http://localhost:3000/auth/callback`.
+
+### Run the dashboard and API
+
+From the repo root:
 
 ```sh
-turbo build --filter=docs
+# Dashboard only (http://localhost:3000)
+pnpm dev:dashboard
+
+# API only (http://localhost:4000)
+pnpm dev:api
+
+# Both in parallel (recommended for full stack)
+pnpm dev:app
 ```
 
-Without global `turbo`:
+Health check: `curl http://localhost:4000/health`
+
+### Supabase locally
+
+With Docker running:
 
 ```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+supabase start
 ```
 
-### Develop
+Apply migrations from `packages/db/migrations` as you normally would for this project, then point both `.env` files at the local URL and keys from `supabase status`.
 
-To develop all apps and packages, run the following command:
+## Workspace layout
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+| Path | Description |
+|------|-------------|
+| `apps/eregna` | Customer dashboard (login, signup, agents list + create) |
+| `apps/api` | REST-style JSON API under `/v1` with JWT auth |
+| `packages/db` | Supabase client helpers and generated types |
+| `packages/ui` | Shared styles and components |
+| `docs/` | Architecture and product notes |
 
-```sh
-cd my-turborepo
-turbo dev
-```
+## Scripts (root)
 
-Without global `turbo`, use your package manager:
+| Script | Description |
+|--------|-------------|
+| `pnpm dev` | Turbo `dev` for all packages that define it |
+| `pnpm dev:dashboard` | Vite dev server for `eregna` |
+| `pnpm dev:api` | Hot Bun server for `api` |
+| `pnpm dev:app` | Dashboard + API together |
+| `pnpm build` | Production builds via Turbo |
+| `pnpm lint` / `pnpm check-types` | Lint and TypeScript checks |
 
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
+## Security notes
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+- Never put the **service role** key in any `VITE_*` variable or ship it to the browser.
+- The dashboard uses only the **anon** key; the API verifies `Authorization: Bearer <access_token>` using the service client.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## Further reading
 
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+See `docs/04-api-layer.md`, `docs/06-dashboard-ui.md`, and `docs/07-auth.md` for deeper design notes.

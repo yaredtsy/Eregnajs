@@ -4,6 +4,9 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:dashboard": "turbo run dev --filter=eregna",
+    "dev:api": "turbo run dev --filter=api",
+    "dev:app": "turbo run dev --filter=eregna --filter=api",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"

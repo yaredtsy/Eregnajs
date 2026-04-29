@@ -4,6 +4,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
 import { AuthProvider } from '../lib/auth'
+import { QueryProvider } from '../lib/query-provider'
 
 import appCss from '../styles.css?url'
 
@@ -29,11 +30,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="min-h-dvh flex flex-col font-sans antialiased [overflow-wrap:anywhere] selection:bg-copper/30">
-        <AuthProvider>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </AuthProvider>
+        </QueryProvider>
         <TanStackDevtools
           config={{ position: 'bottom-right' }}
           plugins={[
