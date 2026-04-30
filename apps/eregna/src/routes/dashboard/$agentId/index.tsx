@@ -17,7 +17,7 @@ function approxTokens(text: string) {
 	return Math.max(0, Math.ceil(text.length / 4));
 }
 
-export const Route = createFileRoute("/dashboard/$agentId")({
+export const Route = createFileRoute("/dashboard/$agentId/")({
 	component: AgentDetailPage,
 });
 

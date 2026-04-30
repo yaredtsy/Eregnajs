@@ -46,3 +46,47 @@ export type PageItem = {
 	created_at: string;
 	updated_at: string;
 };
+
+export type UpdatePageBody = {
+	title?: string;
+	url_pattern?: string | null;
+	description?: string | null;
+	sort_order?: number;
+};
+
+export type ElementItem = {
+	id: string;
+	page_id: string;
+	path: string;
+	parent_id: string | null;
+	label: string;
+	dom_id: string | null;
+	css_selector: string | null;
+	xpath: string | null;
+	description: string | null;
+	notes: string | null;
+	sort_order: number;
+	has_embedding: boolean;
+	created_at: string;
+	updated_at: string;
+};
+
+export type CreateElementBody = {
+	page_id: string;
+	parent_id?: string | null;
+	label: string;
+	dom_id?: string | null;
+	css_selector?: string | null;
+	description?: string | null;
+	notes?: string | null;
+	sort_order?: number;
+};
+
+export type UpdateElementBody = {
+	label?: string;
+	dom_id?: string | null;
+	css_selector?: string | null;
+	description?: string | null;
+	notes?: string | null;
+	sort_order?: number;
+};

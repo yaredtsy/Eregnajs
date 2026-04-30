@@ -1,6 +1,6 @@
 import {
+	BookOpen,
 	Bot,
-	FolderTree,
 	LayoutDashboard,
 	LogOut,
 	Settings,
@@ -19,7 +19,7 @@ function navLinks(agentId: string | undefined): NavLink[] {
 	const links: NavLink[] = [{ label: "Agents", to: "/dashboard", icon: Bot }];
 	if (base) {
 		links.push(
-			{ label: "Sitemaps", to: `${base}/sitemap`, icon: FolderTree },
+			{ label: "Knowledge", to: `${base}/knowledge`, icon: BookOpen },
 			{ label: "Settings", to: base, icon: Settings },
 		);
 	}
@@ -60,12 +60,16 @@ export function DashboardSidebar() {
 			<nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-hidden p-3">
 				{items.map((item) => {
 					const Icon = item.icon;
-					const active =
-						item.to === "/dashboard"
-							? pathname === "/dashboard" || pathname === "/dashboard/"
-							: item.to.endsWith("/sitemap")
-								? pathname === item.to
-								: pathname === item.to;
+					let active = false;
+					if (item.to === "/dashboard") {
+						active = pathname === "/dashboard" || pathname === "/dashboard/";
+					} else if (item.to.endsWith("/knowledge")) {
+						active = pathname.startsWith(item.to);
+					} else {
+						const base = item.to;
+						const atAgentRoot = pathname === base || pathname === `${base}/`;
+						active = atAgentRoot && !pathname.startsWith(`${base}/knowledge`);
+					}
 					return (
 						<Link
 							key={item.label}
