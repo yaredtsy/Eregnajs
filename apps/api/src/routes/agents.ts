@@ -40,7 +40,7 @@ agentsRouter.post('/', zValidator('json', createBody), async (c) => {
 agentsRouter.get('/:id', async (c) => {
   const userId = c.get('userId')
   const id = c.req.param('id')
-  const data = await agentService.getByIdForUser(userId, id)
+  const data = await agentService.getByIdForUserWithPageCount(userId, id)
   if (!data) return jsonError(c, 404, 'Not found')
   return c.json({ data })
 })

@@ -10,17 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as DashboardAgentIdRouteImport } from './routes/dashboard/$agentId'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
+import { Route as DashboardAgentIdSitemapRouteImport } from './routes/dashboard/$agentId.sitemap'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardRoute = DashboardRouteImport.update({
+const DashboardRouteRoute = DashboardRouteRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
@@ -29,6 +32,16 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRouteRoute,
+} as any)
+const DashboardAgentIdRoute = DashboardAgentIdRouteImport.update({
+  id: '/$agentId',
+  path: '/$agentId',
+  getParentRoute: () => DashboardRouteRoute,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
@@ -40,34 +53,62 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardAgentIdSitemapRoute = DashboardAgentIdSitemapRouteImport.update({
+  id: '/sitemap',
+  path: '/sitemap',
+  getParentRoute: () => DashboardAgentIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/dashboard/$agentId': typeof DashboardAgentIdRouteWithChildren
+  '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/dashboard/$agentId': typeof DashboardAgentIdRouteWithChildren
+  '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/dashboard/$agentId': typeof DashboardAgentIdRouteWithChildren
+  '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/login' | '/api/health' | '/auth/callback'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/api/health'
+    | '/auth/callback'
+    | '/dashboard/$agentId'
+    | '/dashboard/'
+    | '/dashboard/$agentId/sitemap'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/login' | '/api/health' | '/auth/callback'
+  to:
+    | '/'
+    | '/login'
+    | '/api/health'
+    | '/auth/callback'
+    | '/dashboard/$agentId'
+    | '/dashboard'
+    | '/dashboard/$agentId/sitemap'
   id:
     | '__root__'
     | '/'
@@ -75,11 +116,14 @@ export interface FileRouteTypes {
     | '/login'
     | '/api/health'
     | '/auth/callback'
+    | '/dashboard/$agentId'
+    | '/dashboard/'
+    | '/dashboard/$agentId/sitemap'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRoute: typeof DashboardRoute
+  DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiHealthRoute: typeof ApiHealthRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -98,7 +142,7 @@ declare module '@tanstack/react-router' {
       id: '/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
+      preLoaderRoute: typeof DashboardRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -107,6 +151,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRouteRoute
+    }
+    '/dashboard/$agentId': {
+      id: '/dashboard/$agentId'
+      path: '/$agentId'
+      fullPath: '/dashboard/$agentId'
+      preLoaderRoute: typeof DashboardAgentIdRouteImport
+      parentRoute: typeof DashboardRouteRoute
     }
     '/auth/callback': {
       id: '/auth/callback'
@@ -122,12 +180,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/$agentId/sitemap': {
+      id: '/dashboard/$agentId/sitemap'
+      path: '/sitemap'
+      fullPath: '/dashboard/$agentId/sitemap'
+      preLoaderRoute: typeof DashboardAgentIdSitemapRouteImport
+      parentRoute: typeof DashboardAgentIdRoute
+    }
   }
 }
 
+interface DashboardAgentIdRouteChildren {
+  DashboardAgentIdSitemapRoute: typeof DashboardAgentIdSitemapRoute
+}
+
+const DashboardAgentIdRouteChildren: DashboardAgentIdRouteChildren = {
+  DashboardAgentIdSitemapRoute: DashboardAgentIdSitemapRoute,
+}
+
+const DashboardAgentIdRouteWithChildren =
+  DashboardAgentIdRoute._addFileChildren(DashboardAgentIdRouteChildren)
+
+interface DashboardRouteRouteChildren {
+  DashboardAgentIdRoute: typeof DashboardAgentIdRouteWithChildren
+  DashboardIndexRoute: typeof DashboardIndexRoute
+}
+
+const DashboardRouteRouteChildren: DashboardRouteRouteChildren = {
+  DashboardAgentIdRoute: DashboardAgentIdRouteWithChildren,
+  DashboardIndexRoute: DashboardIndexRoute,
+}
+
+const DashboardRouteRouteWithChildren = DashboardRouteRoute._addFileChildren(
+  DashboardRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRoute: DashboardRoute,
+  DashboardRouteRoute: DashboardRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiHealthRoute: ApiHealthRoute,
   AuthCallbackRoute: AuthCallbackRoute,

@@ -33,6 +33,20 @@ export const agentService = {
     return data
   },
 
+  async getByIdForUserWithPageCount(userId: string, id: string): Promise<AgentListItem | null> {
+    const db = createServerClient()
+    const { data, error } = await db
+      .from('agents')
+      .select('*, pages(count)')
+      .eq('id', id)
+      .eq('owner_id', userId)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return null
+    return mapAgentListRow(data as AgentRow & { pages?: { count: number }[] })
+  },
+
   async create(
     userId: string,
     input: Pick<TablesInsert<'agents'>, 'name' | 'website_url' | 'description' | 'model' | 'system_prompt'>,
