@@ -68,7 +68,7 @@ With Docker running:
 supabase start
 ```
 
-Apply migrations from `packages/db/migrations` as you normally would for this project, then point both `.env` files at the local URL and keys from `supabase status`.
+Apply schema with `supabase db reset` (migrations + `supabase/seed.sql`) or `supabase db push --local` for pending migrations only, then point both `.env` files at the local URL and keys from `supabase status`.
 
 ## Workspace layout
 
@@ -78,6 +78,7 @@ Apply migrations from `packages/db/migrations` as you normally would for this pr
 | `apps/api` | REST-style JSON API under `/v1` with JWT auth |
 | `packages/db` | Supabase client helpers and generated types |
 | `packages/ui` | Shared styles and components |
+| `supabase/` | Supabase CLI: `config.toml`, `migrations/`, `seed.sql` |
 | `docs/` | Architecture and product notes |
 
 ## Scripts (root)

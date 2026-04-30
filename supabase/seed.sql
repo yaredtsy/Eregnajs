@@ -1,5 +1,5 @@
--- Development seed: not for production. Run after at least one user exists (profiles row).
--- Auth users are created via Supabase Auth or `pnpm run seed` in @repo/db (Admin API).
+-- Dev-only sample data after `supabase db reset`. Runs only locally unless you deploy this seed.
+-- Requires at least one profile (e.g. sign up in Studio or run `pnpm run --cwd packages/db seed`).
 
 do $$
 declare
@@ -11,12 +11,12 @@ declare
 begin
   select id into v_owner from public.profiles order by created_at limit 1;
   if v_owner is null then
-    raise notice '0009_seed_dev: skip — no profiles yet';
+    raise notice 'seed.sql: skip — no profiles yet';
     return;
   end if;
 
   if exists (select 1 from public.agents where owner_id = v_owner) then
-    raise notice '0009_seed_dev: skip — owner already has an agent';
+    raise notice 'seed.sql: skip — owner already has an agent';
     return;
   end if;
 
