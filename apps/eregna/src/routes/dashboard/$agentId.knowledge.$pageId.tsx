@@ -1,7 +1,6 @@
-import { Trash2 } from "@repo/ui/lucide-react";
+import { ArrowLeft, Trash2 } from "@repo/ui/lucide-react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { DashboardBreadcrumbs } from "#/components/dashboard/DashboardBreadcrumbs";
 import { useAgent } from "#/hooks/useAgents";
 import {
 	useCreateElement,
@@ -134,18 +133,14 @@ function PageEditorPage() {
 
 	return (
 		<div className="mx-auto max-w-5xl">
-			<DashboardBreadcrumbs
-				items={[
-					{ label: "Agents", to: "/dashboard" },
-					{ label: agent.name, to: "/dashboard/$agentId", params: { agentId } },
-					{
-						label: "Knowledge",
-						to: "/dashboard/$agentId/knowledge",
-						params: { agentId },
-					},
-					{ label: page.title },
-				]}
-			/>
+			<Link
+				to="/dashboard/$agentId/knowledge"
+				params={{ agentId }}
+				className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground no-underline hover:text-foreground"
+			>
+				<ArrowLeft className="h-3.5 w-3.5" />
+				Back to Knowledge
+			</Link>
 
 			<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div>

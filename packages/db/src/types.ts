@@ -297,6 +297,181 @@ export type Database = {
           },
         ]
       }
+      walkthrough_sessions: {
+        Row: {
+          id: string
+          agent_id: string
+          visitor_id: string | null
+          visitor_meta: Json | null
+          page_url: string | null
+          created_at: string
+          last_active_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          visitor_id?: string | null
+          visitor_meta?: Json | null
+          page_url?: string | null
+          created_at?: string
+          last_active_at?: string
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          visitor_id?: string | null
+          visitor_meta?: Json | null
+          page_url?: string | null
+          created_at?: string
+          last_active_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "walkthrough_sessions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_messages: {
+        Row: {
+          id: string
+          session_id: string
+          role: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          role: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          role?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "walkthrough_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_text_parts: {
+        Row: {
+          id: string
+          message_id: string
+          part_index: number
+          text: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          part_index?: number
+          text: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          part_index?: number
+          text?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_text_parts_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "session_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      walkthroughs: {
+        Row: {
+          id: string
+          message_id: string
+          plan_goal: string
+          plan_rationale: string | null
+          stream_status: string
+          parent_context: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          plan_goal: string
+          plan_rationale?: string | null
+          stream_status?: string
+          parent_context?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          plan_goal?: string
+          plan_rationale?: string | null
+          stream_status?: string
+          parent_context?: Json | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "walkthroughs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "session_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      walkthrough_steps: {
+        Row: {
+          id: string
+          walkthrough_id: string
+          step_index: number
+          actions: Json
+          popover: Json | null
+          cumulative_ms: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          walkthrough_id: string
+          step_index: number
+          actions?: Json
+          popover?: Json | null
+          cumulative_ms?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          walkthrough_id?: string
+          step_index?: number
+          actions?: Json
+          popover?: Json | null
+          cumulative_ms?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "walkthrough_steps_walkthrough_id_fkey"
+            columns: ["walkthrough_id"]
+            isOneToOne: false
+            referencedRelation: "walkthroughs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: Record<string, never>
     Functions: {

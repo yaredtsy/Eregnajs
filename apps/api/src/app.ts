@@ -5,6 +5,7 @@ import { authMiddleware } from './middleware/auth.js'
 import { agentsRouter } from './routes/agents.js'
 import { elementsRouter } from './routes/elements.js'
 import { pagesRouter } from './routes/pages.js'
+import { sessionsRouter } from './routes/sessions.js'
 
 export const app = new Hono()
 
@@ -27,6 +28,7 @@ v1.use('*', authMiddleware)
 v1.route('/agents', agentsRouter)
 v1.route('/pages', pagesRouter)
 v1.route('/elements', elementsRouter)
+v1.route('/sessions', sessionsRouter)
 
 app.route('/v1', v1)
 

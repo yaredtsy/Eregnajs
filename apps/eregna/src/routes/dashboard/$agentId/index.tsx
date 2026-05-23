@@ -1,311 +1,138 @@
-import { ExternalLink, FlaskConical } from "@repo/ui/lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
 import { CopyField } from "#/components/dashboard/CopyField";
-import { DashboardBreadcrumbs } from "#/components/dashboard/DashboardBreadcrumbs";
-import { useAgent, useUpdateAgent } from "#/hooks/useAgents";
-import type { AgentModel } from "#/lib/api-types";
-
-const MODELS: AgentModel[] = ["gpt-4o-mini", "gpt-4o", "claude-3-5-haiku"];
-
-function modelLabel(m: string) {
-	if (m === "gpt-4o-mini") return "gpt-4o-mini (Default)";
-	return m;
-}
-
-function approxTokens(text: string) {
-	return Math.max(0, Math.ceil(text.length / 4));
-}
+import { useAgent } from "#/hooks/useAgents";
+import { useSessions } from "#/hooks/useSessions";
 
 export const Route = createFileRoute("/dashboard/$agentId/")({
-	component: AgentDetailPage,
+	component: AgentEmbedPage,
 });
 
-function AgentDetailPage() {
+const embedSnippet = (publicId: string) =>
+	`<script\n  src="https://cdn.eregna.dev/embed.iife.js"\n  data-agent-id="${publicId}"\n  defer>\n</script>`;
+
+function AgentEmbedPage() {
 	const { agentId } = Route.useParams();
-	const { data: agent, isLoading, error } = useAgent(agentId);
-	const updateAgent = useUpdateAgent(agentId);
+	const { data: agent, isLoading } = useAgent(agentId);
+	const { data: sessions } = useSessions(agentId);
 
-	const [name, setName] = useState("");
-	const [description, setDescription] = useState("");
-	const [model, setModel] = useState<AgentModel>("gpt-4o-mini");
-	const [systemPrompt, setSystemPrompt] = useState("");
-	const [isActive, setIsActive] = useState(true);
-	const [saveError, setSaveError] = useState<string | null>(null);
-	const [savedAt, setSavedAt] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (!agent) return;
-		setName(agent.name);
-		setDescription(agent.description ?? "");
-		setModel((agent.model as AgentModel) ?? "gpt-4o-mini");
-		setSystemPrompt(agent.system_prompt ?? "");
-		setIsActive(agent.is_active);
-	}, [agent]);
-
-	const dirty = useMemo(() => {
-		if (!agent) return false;
+	if (isLoading)
+		return <p className="text-sm text-muted-foreground">Loading…</p>;
+	if (!agent)
 		return (
-			name !== agent.name ||
-			description !== (agent.description ?? "") ||
-			model !== (agent.model as AgentModel) ||
-			systemPrompt !== (agent.system_prompt ?? "") ||
-			isActive !== agent.is_active
-		);
-	}, [agent, name, description, model, systemPrompt, isActive]);
-
-	async function save() {
-		if (!agent) return;
-		setSaveError(null);
-		setSavedAt(null);
-		try {
-			await updateAgent.mutateAsync({
-				name,
-				description: description.trim() || null,
-				model,
-				system_prompt: systemPrompt.trim() || null,
-				is_active: isActive,
-			});
-			setSavedAt(new Date().toLocaleTimeString());
-		} catch (e) {
-			setSaveError(e instanceof Error ? e.message : "Save failed");
-		}
-	}
-
-	if (isLoading) {
-		return <p className="text-sm text-muted-foreground">Loading agent…</p>;
-	}
-
-	if (error || !agent) {
-		return (
-			<div className="rounded-2xl border border-border bg-card p-8 text-center">
-				<p className="text-destructive text-sm mb-4">
-					{error instanceof Error ? error.message : "Agent not found."}
-				</p>
-				<Link
-					to="/dashboard"
-					className="text-sm font-medium text-blue-400 hover:underline"
-				>
-					Back to agents
+			<p className="text-sm text-destructive">
+				Agent not found.{" "}
+				<Link to="/dashboard" className="text-blue-400 hover:underline">
+					Back
 				</Link>
-			</div>
+			</p>
 		);
-	}
-
-	const websiteHost = (() => {
-		try {
-			return new URL(agent.website_url).hostname;
-		} catch {
-			return agent.website_url;
-		}
-	})();
 
 	return (
-		<div className="mx-auto max-w-6xl">
-			<DashboardBreadcrumbs
-				items={[{ label: "Agents", to: "/dashboard" }, { label: agent.name }]}
-			/>
+		<div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+			<div className="space-y-6">
+				{/* Embed snippet */}
+				<section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+					<h2 className="mb-1 text-sm font-semibold text-foreground">
+						Embed snippet
+					</h2>
+					<p className="mb-4 text-xs text-muted-foreground">
+						Paste this inside your site's{" "}
+						<code className="font-mono text-foreground/70">&lt;body&gt;</code>{" "}
+						to activate the widget.
+					</p>
+					<pre className="overflow-x-auto rounded-xl bg-[#0e0e1c] px-4 py-3 text-xs leading-relaxed text-indigo-200 font-mono border border-indigo-500/10">
+						{embedSnippet(agent.public_id)}
+					</pre>
+				</section>
 
-			<div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-				<div>
-					<div className="flex flex-wrap items-center gap-3">
-						<h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
-							{agent.name}
-						</h1>
-						<span
-							className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${
-								agent.is_active
-									? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-									: "border-muted-foreground/40 text-muted-foreground"
-							}`}
-						>
-							{agent.is_active ? "ACTIVE" : "INACTIVE"}
-						</span>
+				{/* Sessions */}
+				<section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+					<div className="mb-4 flex items-center justify-between">
+						<h2 className="text-sm font-semibold text-foreground">
+							Recent sessions
+						</h2>
+						{sessions && sessions.length > 0 && (
+							<span className="text-xs text-muted-foreground">
+								{sessions.length} session{sessions.length !== 1 ? "s" : ""}
+							</span>
+						)}
 					</div>
-					<a
-						href={agent.website_url}
-						target="_blank"
-						rel="noreferrer"
-						className="mt-2 inline-flex items-center gap-1.5 text-sm text-blue-400 hover:underline"
-					>
-						{websiteHost}
-						<ExternalLink className="h-3.5 w-3.5" />
-					</a>
-				</div>
-				<div className="flex flex-wrap gap-2">
-					<button
-						type="button"
-						onClick={() =>
-							window.alert(
-								"Test the agent from your site with the widget installed, or call the agent API using the public ID and secret key.",
-							)
-						}
-						className="rounded-xl border border-border bg-transparent px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
-					>
-						<span className="inline-flex items-center gap-2">
-							<FlaskConical className="h-4 w-4" />
-							Test agent
-						</span>
-					</button>
-					<button
-						type="button"
-						disabled={!dirty || updateAgent.isPending}
-						onClick={() => void save()}
-						className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-45"
-					>
-						{updateAgent.isPending ? "Saving…" : "Save changes"}
-					</button>
-				</div>
+					{!sessions || sessions.length === 0 ? (
+						<p className="text-sm text-muted-foreground">
+							No sessions yet — embed the widget on your site to start.
+						</p>
+					) : (
+						<div className="overflow-x-auto">
+							<table className="w-full text-left text-xs">
+								<thead>
+									<tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
+										<th className="pb-2 pr-4">Session</th>
+										<th className="pb-2 pr-4">Page URL</th>
+										<th className="pb-2">Started</th>
+									</tr>
+								</thead>
+								<tbody>
+									{sessions.map((s) => (
+										<tr
+											key={s.id}
+											className="border-b border-border/50 last:border-0 hover:bg-muted/20"
+										>
+											<td className="py-2 pr-4 font-mono text-muted-foreground">
+												{s.id.slice(0, 8)}…
+											</td>
+											<td className="py-2 pr-4 max-w-[220px] truncate text-foreground/80">
+												{s.page_url ?? "—"}
+											</td>
+											<td className="py-2 text-muted-foreground whitespace-nowrap">
+												{new Date(s.created_at).toLocaleString()}
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					)}
+				</section>
 			</div>
 
-			{saveError ? (
-				<p className="mb-4 text-sm text-destructive" role="alert">
-					{saveError}
-				</p>
-			) : null}
-			{savedAt && !saveError ? (
-				<p className="mb-4 text-xs text-emerald-500/90">Saved at {savedAt}</p>
-			) : null}
+			{/* Sidebar */}
+			<aside className="space-y-4">
+				<section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+					<p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+						Credentials
+					</p>
+					<div className="space-y-3">
+						<CopyField label="Public ID" value={agent.public_id} />
+						<CopyField label="Secret key" value={agent.secret_key} masked />
+					</div>
+					<p className="mt-3 text-[11px] text-amber-500/80">
+						Never expose the secret key in client-side code.
+					</p>
+				</section>
 
-			<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-				<div className="space-y-6">
-					<section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-						<h2 className="mb-4 text-sm font-semibold text-foreground">
-							Configuration
-						</h2>
+				<section className="rounded-2xl border border-border bg-card p-5 shadow-sm text-xs">
+					<p className="font-medium text-muted-foreground mb-1">Website</p>
+					<p className="break-all text-foreground/80">{agent.website_url}</p>
+				</section>
 
-						<div className="mb-5">
-							<label
-								htmlFor="edit-name"
-								className="mb-1 block text-xs font-medium text-muted-foreground"
-							>
-								Name
-							</label>
-							<input
-								id="edit-name"
-								value={name}
-								onChange={(e) => setName(e.target.value)}
-								minLength={2}
-								maxLength={80}
-								className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
-							/>
-						</div>
-
-						<div className="mb-5">
-							<label
-								htmlFor="edit-desc"
-								className="mb-1 block text-xs font-medium text-muted-foreground"
-							>
-								Description
-							</label>
-							<textarea
-								id="edit-desc"
-								value={description}
-								onChange={(e) => setDescription(e.target.value)}
-								maxLength={500}
-								rows={2}
-								className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground min-h-[72px]"
-							/>
-						</div>
-
-						<div className="mb-5">
-							<label
-								htmlFor="edit-model"
-								className="mb-1 block text-xs font-medium text-muted-foreground"
-							>
-								Language model
-							</label>
-							<select
-								id="edit-model"
-								value={model}
-								onChange={(e) => setModel(e.target.value as AgentModel)}
-								className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
-							>
-								{MODELS.map((m) => (
-									<option key={m} value={m}>
-										{modelLabel(m)}
-									</option>
-								))}
-							</select>
-						</div>
-
-						<div className="relative mb-6">
-							<div className="mb-1 flex items-center justify-between gap-2">
-								<label
-									htmlFor="edit-prompt"
-									className="text-xs font-medium text-muted-foreground"
-								>
-									System prompt
-								</label>
-								<span className="text-[11px] tabular-nums text-muted-foreground">
-									Tokens: ~{approxTokens(systemPrompt)}
-								</span>
-							</div>
-							<textarea
-								id="edit-prompt"
-								value={systemPrompt}
-								onChange={(e) => setSystemPrompt(e.target.value)}
-								maxLength={2000}
-								rows={12}
-								className="w-full resize-y rounded-xl border border-border bg-background px-3 py-3 text-sm leading-relaxed text-foreground min-h-[200px]"
-								placeholder="You are an assistant for…"
-							/>
-						</div>
-
-						<div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background/50 px-4 py-3">
-							<div>
-								<p className="text-sm font-medium text-foreground">
-									Agent endpoint
-								</p>
-								<p className="mt-0.5 text-xs text-muted-foreground">
-									Allow external applications to interact with this agent via
-									API.
-								</p>
-							</div>
-							<button
-								type="button"
-								role="switch"
-								aria-checked={isActive}
-								onClick={() => setIsActive((v) => !v)}
-								className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors ${
-									isActive
-										? "border-emerald-500/40 bg-emerald-600"
-										: "border-border bg-input"
-								}`}
-							>
-								<span
-									className={`absolute top-0.5 left-0.5 block size-5 rounded-full bg-white shadow transition-transform ${
-										isActive ? "translate-x-5" : "translate-x-0"
-									}`}
-								/>
-							</button>
-						</div>
-					</section>
+				<div className="rounded-2xl border border-dashed border-border p-5 text-xs space-y-1">
+					<p className="font-medium text-foreground/70 mb-2">Configure</p>
+					<Link
+						to="/dashboard/$agentId/settings"
+						params={{ agentId }}
+						className="block text-blue-400 hover:underline"
+					>
+						Agent settings &amp; prompt →
+					</Link>
+					<Link
+						to="/dashboard/$agentId/knowledge"
+						params={{ agentId }}
+						className="block text-blue-400 hover:underline"
+					>
+						Page knowledge tree →
+					</Link>
 				</div>
-
-				<aside className="space-y-6">
-					<section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-						<h2 className="mb-4 text-sm font-semibold text-foreground">
-							Embed credentials
-						</h2>
-						<div className="space-y-4">
-							<CopyField label="Public ID" value={agent.public_id} />
-							<CopyField label="Secret key" value={agent.secret_key} masked />
-						</div>
-						<p className="mt-4 text-xs text-amber-500/90">
-							Never expose the secret key in client-side code.
-						</p>
-					</section>
-
-					<section className="rounded-2xl border border-dashed border-border bg-card/40 p-4 text-xs text-muted-foreground">
-						<p className="font-medium text-foreground/90">Website URL</p>
-						<p className="mt-1 break-all">{agent.website_url}</p>
-						<p className="mt-2">
-							URL is set at creation time. Contact support to change it.
-						</p>
-					</section>
-				</aside>
-			</div>
+			</aside>
 		</div>
 	);
 }
