@@ -38,7 +38,7 @@ export function AgentForm({ onSubmit, submitting }: Props) {
     >
       <h2 className="font-display text-xl font-semibold text-cream">New agent</h2>
 
-      <div>
+      <div id="agent-name-field">
         <label htmlFor="agent-name" className="block text-xs font-medium text-muted-foreground mb-1">
           Name
         </label>
@@ -54,7 +54,7 @@ export function AgentForm({ onSubmit, submitting }: Props) {
         />
       </div>
 
-      <div>
+      <div id="agent-url-field">
         <label htmlFor="agent-url" className="block text-xs font-medium text-muted-foreground mb-1">
           Website URL
         </label>

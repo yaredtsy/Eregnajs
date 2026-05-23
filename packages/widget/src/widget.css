@@ -1,44 +1,418 @@
 @import "tailwindcss";
 
-@layer components {
-  .eregna-widget-root {
-    @apply pointer-events-none;
-  }
+/* ── Blink animation for typewriter cursor ──────────────────────────────── */
+@keyframes eregna-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
 
-  .eregna-float-btn {
-    @apply pointer-events-auto fixed bottom-5 right-5 z-10 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full border-0 bg-indigo-600 text-white shadow-lg transition hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400;
-  }
+/* ── Root ─────────────────────────────────────────────────────────────────── */
+.eregna-widget-root {
+  pointer-events: none;
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 2147483646;
+  font-family: system-ui, -apple-system, sans-serif;
+}
 
-  .eregna-float-btn__icon {
-    @apply flex items-center justify-center;
-  }
+/* ── FAB ──────────────────────────────────────────────────────────────────── */
+.eregna-fab {
+  pointer-events: auto;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.5);
+  transition: background 0.15s, transform 0.1s;
+  z-index: 10;
+}
+.eregna-fab:hover { background: #4338ca; transform: scale(1.05); }
+.eregna-fab__dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f43f5e;
+  border: 2px solid #1e1e2e;
+}
 
-  .eregna-chat-panel {
-    @apply pointer-events-auto fixed bottom-24 right-5 z-10 flex w-[min(100vw-2.5rem,22rem)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl;
-  }
+/* ── Chat popup ───────────────────────────────────────────────────────────── */
+.eregna-chat-popup {
+  pointer-events: auto;
+  position: fixed;
+  bottom: 84px;
+  right: 20px;
+  width: min(calc(100vw - 40px), 360px);
+  max-height: min(calc(100vh - 120px), 560px);
+  display: flex;
+  flex-direction: column;
+  background: #13131f;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  z-index: 9;
+}
 
-  .eregna-chat-panel__header {
-    @apply flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3;
-  }
+.eregna-chat-popup__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: #1a1a2e;
+  flex-shrink: 0;
+}
+.eregna-chat-popup__header-info { display: flex; align-items: center; gap: 10px; }
+.eregna-chat-popup__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.eregna-chat-popup__agent-name {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+.eregna-chat-popup__status {
+  margin: 0;
+  font-size: 11px;
+  color: #64748b;
+}
+.eregna-chat-popup__header-actions { display: flex; align-items: center; gap: 4px; }
 
-  .eregna-chat-panel__title {
-    @apply m-0 text-base font-semibold text-slate-900;
-  }
+.eregna-chat-popup__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
 
-  .eregna-chat-panel__close {
-    @apply flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-2xl leading-none text-slate-600 hover:bg-slate-200 hover:text-slate-900;
-  }
+/* ── Messages ─────────────────────────────────────────────────────────────── */
+.eregna-msg-list { display: flex; flex-direction: column; gap: 12px; }
 
-  .eregna-chat-panel__body {
-    @apply min-h-[12rem] flex-1 p-4;
-  }
+.eregna-msg {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.eregna-msg--user { flex-direction: row-reverse; }
+.eregna-msg--user .eregna-msg__content {
+  background: #3730a3;
+  color: #e0e7ff;
+  border-radius: 14px 14px 4px 14px;
+}
 
-  .eregna-chat-panel__placeholder {
-    @apply m-0 text-sm text-slate-500;
-  }
+.eregna-msg__avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
 
-  .sr-only {
-    @apply absolute h-px w-px overflow-hidden whitespace-nowrap border-0 p-0;
-    clip: rect(0, 0, 0, 0);
-  }
+.eregna-msg__content {
+  background: #1e1e30;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 4px 14px 14px 14px;
+  padding: 8px 12px;
+  max-width: 88%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eregna-msg__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+
+/* ── Walkthrough card ─────────────────────────────────────────────────────── */
+.eregna-wt-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(79, 70, 229, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  width: 100%;
+}
+.eregna-wt-card:hover { background: rgba(79, 70, 229, 0.22); }
+.eregna-wt-card--active {
+  background: rgba(79, 70, 229, 0.28);
+  border-color: rgba(99, 102, 241, 0.7);
+}
+.eregna-wt-card__icon {
+  font-size: 12px;
+  color: #a5b4fc;
+  flex-shrink: 0;
+}
+.eregna-wt-card__body { display: flex; flex-direction: column; gap: 2px; }
+.eregna-wt-card__goal {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e0e7ff;
+}
+.eregna-wt-card__meta {
+  font-size: 11px;
+  color: #7c85c0;
+}
+
+/* ── Player bar ───────────────────────────────────────────────────────────── */
+.eregna-player-bar {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: #111120;
+  flex-shrink: 0;
+}
+
+.eregna-player-bar__chapter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.eregna-player-bar__chapter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #a5b4fc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+.eregna-player-bar__step-count {
+  font-size: 11px;
+  color: #4b5563;
+  flex-shrink: 0;
+}
+
+.eregna-player-bar__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.eregna-player-bar__transport { display: flex; align-items: center; gap: 4px; }
+
+/* ── Scrubber ─────────────────────────────────────────────────────────────── */
+.eregna-scrubber {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.eregna-scrubber__time {
+  font-size: 10px;
+  color: #4b5563;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  min-width: 28px;
+}
+.eregna-scrubber__time:last-child { text-align: right; }
+.eregna-scrubber__track {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  background: #2d2d44;
+  border-radius: 2px;
+  cursor: pointer;
+  outline: none;
+}
+.eregna-scrubber__track::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #6366f1;
+  cursor: pointer;
+}
+.eregna-scrubber__track::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #6366f1;
+  border: none;
+  cursor: pointer;
+}
+
+/* ── Icon buttons ─────────────────────────────────────────────────────────── */
+.eregna-icon-btn {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  font-size: 18px;
+  line-height: 1;
+}
+.eregna-icon-btn:hover { background: rgba(255,255,255,0.07); color: #e2e8f0; }
+.eregna-icon-btn--primary {
+  background: #4f46e5;
+  color: #fff;
+  width: 34px;
+  height: 34px;
+}
+.eregna-icon-btn--primary:hover { background: #4338ca; }
+
+/* ── Speed select ─────────────────────────────────────────────────────────── */
+.eregna-speed-select {
+  background: #1e1e30;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 11px;
+  padding: 2px 4px;
+  cursor: pointer;
+  outline: none;
+}
+.eregna-speed-select:hover { border-color: rgba(99,102,241,0.5); }
+
+/* ── Composer ─────────────────────────────────────────────────────────────── */
+.eregna-composer {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  background: #0e0e1c;
+}
+
+.eregna-player-bar .eregna-composer {
+  margin: 2px -12px -10px;
+}
+.eregna-composer__input {
+  flex: 1;
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 13px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+.eregna-composer__input::placeholder { color: #4b5563; }
+.eregna-composer__input:focus { border-color: rgba(99,102,241,0.6); }
+.eregna-composer__send {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: #4f46e5;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ── Detached bar ─────────────────────────────────────────────────────────── */
+.eregna-detached-bar {
+  pointer-events: auto;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100vw - 40px), 440px);
+  background: #13131f;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  z-index: 9;
+}
+
+.eregna-detached-bar .eregna-player-bar {
+  border-top: none;
+  padding: 0;
+  gap: 0;
+  background: transparent;
+}
+
+.eregna-detached-bar .eregna-player-bar__chapter {
+  padding: 12px 14px 4px;
+}
+
+.eregna-detached-bar .eregna-scrubber {
+  padding: 2px 14px;
+}
+
+.eregna-detached-bar .eregna-player-bar__controls {
+  padding: 4px 14px 12px;
+}
+
+.eregna-detached-bar .eregna-composer {
+  margin: 0;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background: #111120;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+.eregna-chat-popup__body::-webkit-scrollbar { width: 4px; }
+.eregna-chat-popup__body::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
+/* ── sr-only ──────────────────────────────────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

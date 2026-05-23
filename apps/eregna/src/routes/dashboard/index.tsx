@@ -15,7 +15,7 @@ function AgentsIndexPage() {
 
 	return (
 		<div className="mx-auto max-w-6xl">
-			<div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+			<div id="agents-page-hero" className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 				<div>
 					<p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
 						Agents
@@ -29,10 +29,11 @@ function AgentsIndexPage() {
 					</p>
 				</div>
 				<button
+					id="new-agent-btn"
 					type="button"
 					onClick={() =>
 						document
-							.getElementById("new-agent")
+							.getElementById("new-agent-form-section")
 							?.scrollIntoView({ behavior: "smooth", block: "start" })
 					}
 					className="inline-flex items-center justify-center self-start rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
@@ -42,7 +43,7 @@ function AgentsIndexPage() {
 			</div>
 
 			<div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
-				<section>
+				<section id="agents-grid">
 					<div className="mb-4 flex items-center justify-between gap-4">
 						<h2 className="text-sm font-semibold text-muted-foreground">
 							All agents
@@ -84,7 +85,7 @@ function AgentsIndexPage() {
 					)}
 				</section>
 
-				<aside id="new-agent" className="lg:pt-2">
+				<aside id="new-agent-form-section" className="lg:pt-2">
 					{formError ? (
 						<p className="mb-3 text-sm text-destructive" role="alert">
 							{formError}

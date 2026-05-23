@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import cssText from "./widget.css?inline";
-import { WidgetRoot } from "./Widget.js";
+import { WidgetRoot } from "./Widget";
 
 export type InitWidgetOptions = {
   /** When omitted, a fixed-position wrapper is appended to `document.body`. */
