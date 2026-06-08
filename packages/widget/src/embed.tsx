@@ -3,10 +3,19 @@ import { createRoot, type Root } from "react-dom/client";
 
 import cssText from "./widget.css?inline";
 import { WidgetRoot } from "./Widget";
+import { installGlobal } from "./embed/installGlobal.js";
+
+// Install window.eregna synchronously so host-page scripts that run before
+// the widget mounts can call setState / registerTool without error.
+if (typeof window !== "undefined") {
+  installGlobal();
+}
 
 export type InitWidgetOptions = {
   /** When omitted, a fixed-position wrapper is appended to `document.body`. */
   container?: HTMLElement;
+  apiBase?: string;
+  agentPublicId?: string;
 };
 
 export type InitWidgetResult = {
@@ -48,7 +57,10 @@ export function initWidget(options: InitWidgetOptions = {}): InitWidgetResult {
   root = createRoot(mount);
   root.render(
     <StrictMode>
-      <WidgetRoot />
+      <WidgetRoot
+        apiBase={options.apiBase}
+        agentPublicId={options.agentPublicId}
+      />
     </StrictMode>,
   );
 

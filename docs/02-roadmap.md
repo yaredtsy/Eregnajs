@@ -69,8 +69,11 @@ Once Phase 1 plays end-to-end on a real customer site:
 
 | Item | Why it's debt | When we pay |
 |---|---|---|
-| Step IDs are timestamps in MVP — not stable across replays. | Replay viewer needs deterministic IDs. | Phase 2 (replay viewer). |
-| Overlay z-index hardcoded to `2147483646`. | Host sites with their own max-z elements will fight us. | First customer complaint. |
-| Only two providers in MVP (OpenAI via LangChain, Anthropic via Claude SDK). | Gemini, OpenRouter, local models will come. | Phase 2; add a new `LlmProvider` impl + line in `pickProvider`. |
-| `ltree` paths recomputed in app code on every move. | Slow if a tree gets large; should be a trigger or recursive CTE. | When a customer has > 200 elements. |
+| Step IDs (when streamed) will be derived in-stream — not stable across replays. | Replay viewer needs deterministic IDs. | Phase 2 (replay viewer + persistence write path). |
+| Overlay z-index hardcoded to `2147483647` on the shadow host. | Host sites with their own max-z elements will fight us. | First customer complaint. |
+| LLM provider abstraction does not exist yet (no streamer is implemented). | When the streamer lands, picking provider per-agent should be a config edge, not a switch. | When the streamer is built — design `LlmProvider` interface upfront. |
+| `ltree` paths recomputed in app code on every insert. | Slow if a tree gets large; should be a trigger or recursive CTE. Reparent operations not exposed yet. | When a customer has > 200 elements or we ship drag-to-reparent. |
+| Walkthrough types live in `packages/widget/src/types/conversation.ts`, not `packages/walkthrough-core`. | Will duplicate when the API streamer needs the same shapes. | The day a second consumer (API streamer) is built. |
+| `packages/db` types are hand-maintained. | Drift between SQL migrations and `Database` types. | When the team grows or a missed-field bug bites. |
+| `POST /v1/sessions` is JWT-gated and uses `agent_id`. | Visitor flow needs unauthenticated mount and `public_id`. | When the public widget endpoint ships. |
 | Shadow-DOM mount is recreated on every `initWidget` call. | Hot-reload during dev re-mounts noisily. | Dev-experience pass. |

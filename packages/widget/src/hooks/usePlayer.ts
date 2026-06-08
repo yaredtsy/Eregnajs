@@ -8,6 +8,8 @@ export function usePlayer() {
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // Live mode: the engine drives step advancement, not the rAF timer.
+    if (state.playMode === "live") return;
     if (state.status !== "playing") {
       lastTsRef.current = null;
       if (rafRef.current !== null) {
@@ -18,9 +20,7 @@ export function usePlayer() {
     }
 
     function tick(ts: number) {
-      if (lastTsRef.current === null) {
-        lastTsRef.current = ts;
-      }
+      if (lastTsRef.current === null) lastTsRef.current = ts;
       const delta = ts - lastTsRef.current;
       lastTsRef.current = ts;
       dispatch({ type: "TICK", deltaMs: delta });
@@ -36,5 +36,6 @@ export function usePlayer() {
       }
       lastTsRef.current = null;
     };
-  }, [state.status, dispatch]);
+  // dispatch is guaranteed stable by React (useReducer contract) — omitted from deps.
+  }, [state.status, state.playMode]);
 }

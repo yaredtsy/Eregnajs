@@ -1,6 +1,8 @@
 # engine/01 — Action Schema
 
-The contract between the planner/streamer (server) and the engine (client). All types live in `packages/walkthrough-core/src/types/walkthrough.ts`.
+> **Status: design spec, not shipped.** Neither the `packages/walkthrough-core` package nor the engine described in these `engine/*` docs exists yet. The widget renders a much smaller subset of actions (`scroll-to`, `highlight`, `wait`) defined in `packages/widget/src/types/conversation.ts`. This document is the target the streamer + headless engine will be built against — keep it as the agreed contract.
+
+The contract between the planner/streamer (server) and the engine (client). All types are intended to live in `packages/walkthrough-core/src/types/walkthrough.ts` once that package is split out (today they're in `packages/widget/src/types/conversation.ts`).
 
 This is the single point of coupling between server and client. Bumping the schema requires a `version` bump on `Walkthrough.meta`.
 

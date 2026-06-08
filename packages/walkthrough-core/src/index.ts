@@ -1,0 +1,34 @@
+export type {
+  ChatRole,
+  MessageStatus,
+  TextPart,
+  MessagePart,
+  Message,
+  Conversation,
+} from "./conversation/types.js";
+
+export type {
+  WalkthroughStatus,
+  StepStatus,
+  PopoverConfig,
+  WalkthroughChapter,
+  WalkthroughStep,
+  WalkthroughPosition,
+  WalkthroughPart,
+} from "./walkthrough/types.js";
+
+export type { WalkthroughAction } from "./walkthrough/actions.js";
+
+export type { JsonPatchOp, StringAppendOp, WireOp, PatchFrame } from "./patch/types.js";
+export { isStringAppend } from "./patch/types.js";
+
+export { applyOps, applyPatchFrame } from "./conversation/applyPatch.js";
+
+export { toLangChain, textFromChunk } from "./conversation/langchain.js";
+
+export {
+  TYPEWRITER_MS_PER_CHAR,
+  POST_POPOVER_PAUSE_MS,
+  ACTION_DURATION_MS,
+  computeStepDuration,
+} from "./walkthrough/timing.js";

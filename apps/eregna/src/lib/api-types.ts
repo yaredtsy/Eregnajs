@@ -90,3 +90,14 @@ export type UpdateElementBody = {
 	notes?: string | null;
 	sort_order?: number;
 };
+
+export type RunStatus = "streaming" | "complete" | "aborted" | "error";
+
+export type AgentRunListItem = {
+	id: string;
+	agent_id: string;
+	query: string;
+	status: RunStatus;
+	started_at: number;
+	completed_at: number | null;
+};

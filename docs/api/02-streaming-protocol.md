@@ -1,5 +1,7 @@
 # api/02 — Streaming Protocol
 
+> **Status: design spec, not shipped.** `POST /v1/walkthroughs/run` does not exist in `apps/api/src/routes/` yet. The widget plays a static sample to validate the UI. This document defines the intended wire format for when the planner + streamer arrive — treat it as the contract to write tests against, not as the description of running code.
+
 `POST /v1/walkthroughs/run` returns a `text/event-stream`. This doc fully specifies the wire format.
 
 The widget consumes the stream with `EventSource`-style parsing (fetch + ReadableStream, since `EventSource` doesn't support POST). The engine appends `Step` events to its `StepQueue` as they arrive and plays them with no delay between LLM and renderer.

@@ -23,34 +23,67 @@ If you've worked with the Anthropic SDK's content blocks, you already know this 
 
 ## Top-level types
 
+> **Where these live today.** The shipped types are in `packages/widget/src/types/conversation.ts` — the originally-planned `packages/walkthrough-core` package hasn't been split out yet (see `01-folder-structure.md`). Move this file when a second consumer (the API streamer) needs the same shapes.
+
+The shipped widget types are a **simplified subset** of the model described below — closer to the design once the planner exists, but stripped of streaming-status and full `Plan` fields that we don't need yet:
+
 ```ts
-// packages/walkthrough-core/src/types/conversation.ts
+// packages/widget/src/types/conversation.ts (as shipped)
 
-export interface Conversation {
-  sessionId: string                     // = walkthrough_sessions.id
-  messages: Message[]                   // ordered, append-only
-}
+export type MessageRole = "user" | "assistant"
 
-export interface Message {
+export type TextPart = { type: "text"; text: string }
+
+export type WalkthroughAction =
+  | { type: "scroll-to"; elementId: string }
+  | { type: "highlight";  elementId: string }
+  | { type: "wait";       ms: number }
+
+export type WalkthroughStep = {
   id: string
-  role: 'user' | 'assistant'
-  parts: MessagePart[]
-  createdAt: number                     // ms epoch
+  actions: WalkthroughAction[]
+  popover?: { title?: string; body: string; elementId?: string }
 }
 
-export type MessagePart =
-  | TextPart
-  | WalkthroughPart
-  // future: ToolUsePart, ToolResultPart, ImagePart, …
-
-export interface TextPart {
-  type: 'text'
-  text: string                          // plain text (markdown allowed for assistant; user is raw)
+export type WalkthroughPart = {
+  type: "walkthrough"
+  walkthroughId: string
+  planGoal: string
+  planRationale?: string
+  chapters: WalkthroughChapter[]        // pre-computed grouping by stepIndex
+  steps: WalkthroughStep[]
+  parentContext?: WalkthroughPosition | null
 }
+
+export type Message = {
+  id: string
+  role: MessageRole
+  parts: (TextPart | WalkthroughPart)[]
+  createdAt: number
+}
+
+export type Conversation = {
+  sessionId: string
+  agentName: string
+  messages: Message[]
+}
+
+export type WalkthroughPosition = {
+  messageId: string
+  walkthroughId: string
+  stepIndex: number
+  stepOffsetMs: number
+}
+```
+
+The fully-intended shape, kept here as a reference for the streamer work to come:
+
+```ts
+// future packages/walkthrough-core/src/types/conversation.ts
 
 export interface WalkthroughPart {
   type: 'walkthrough'
-  walkthroughId: string                 // stable id (= server row id)
+  walkthroughId: string
 
   plan: Plan                            // committed plan (see agent/03)
   steps: Step[]                         // append-only as the streamer emits
@@ -58,21 +91,11 @@ export interface WalkthroughPart {
   streamStatus: 'open' | 'closed' | 'aborted' | 'error'
   streamError?: string
 
-  /**
-   * If non-null, this walkthrough started from a pause point in an earlier
-   * walkthrough part — the visitor asked a follow-up mid-playback.
-   * Lets the renderer stitch the timeline end-to-end.
-   */
   parentContext: Position | null
 }
-
-export interface Position {
-  messageId: string
-  walkthroughId: string                 // a Message may have >1 walkthrough part
-  stepIndex: number                     // index into WalkthroughPart.steps
-  stepOffsetMs: number                  // 0..stepDuration(step) — mid-step is allowed
-}
 ```
+
+A `Position` (= shipped `WalkthroughPosition`) is the universal coordinate — written by the scrubber, read by the engine, stamped on follow-ups.
 
 A `Position` is the universal coordinate — written by the scrubber, read by the engine, stamped on follow-ups.
 
@@ -251,6 +274,6 @@ Everything that isn't in the right column is unchanged. We did not invent a new 
 
 ## MVP follow-ups (owned elsewhere)
 
-- **Persistence shape.** `data/01-drizzle-schema.md` currently stores a flat `walkthrough_sessions` + `walkthrough_steps`. The message/parts model needs a `messages` row (`session_id`, `role`, `created_at`) and a `walkthroughs` row (`message_id`, `plan_json`, `parent_context_json`, `stream_status`), with `walkthrough_steps.walkthrough_id` + `cumulative_ms`. Until that lands, the client keeps `Conversation` in memory and the single-session-row fallback represents the most recent walkthrough.
-- **SSE protocol.** `api/02-streaming-protocol.md` emits `session` → `plan` → `step`* → `done`. With message/parts as first-class, it needs `message_start` (carries `messageId`, `role`) and `walkthrough_start` (carries `walkthroughId`, `parentContext`) before the existing `plan` and `step` events, plus `message_end`.
-- **Replay endpoint.** Dashboard playback reads the persisted `messages` + parts and rehydrates `Conversation`. Not in MVP UI; the data shape is in place.
+- **Persistence shape — landed.** The `walkthroughs` migration (`supabase/migrations/20250523000001_walkthroughs.sql`) now lays down `session_messages` (role + `created_at`), `message_text_parts`, `walkthroughs` (`message_id`, `plan_goal`, `plan_rationale`, `stream_status`, `parent_context jsonb`), and `walkthrough_steps` (`walkthrough_id`, `step_index`, `actions jsonb`, `popover jsonb`, `cumulative_ms`). See `data/01-drizzle-schema.md` for the mapping from in-memory types to rows. No code writes to four of the five tables yet; the only inserts today are `walkthrough_sessions` on widget boot.
+- **SSE protocol.** Still on the roadmap. `api/02-streaming-protocol.md` is the design target. The current widget plays a static `SAMPLE_CONVERSATION` so the UI layer can iterate without a streamer.
+- **Replay endpoint.** Dashboard playback reads the persisted message + parts and rehydrates `Conversation`. The data shape can support it; no UI built.

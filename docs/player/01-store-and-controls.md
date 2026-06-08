@@ -1,5 +1,7 @@
 # player/01 — Store & Controls
 
+> **What's shipped vs. spec.** The shipped widget uses `useReducer` + Context (`packages/widget/src/store/widget-context.tsx`), not Zustand. The mode/status/speed structure described below matches the implementation; Zustand-specific code samples in this doc should be read as the *shape* of state and selectors, not the runtime library. The Bar + Popup layout, FAB, and detached/bubble switching are all built.
+
 Two layout pieces and one persistent thing.
 
 - **The Bar** — always present. Carries the text input. Morphs visually by **activity**: idle = just input + send; active (a walkthrough is being shown, streamed, paused, scrubbed, or completed) = music-player controls stacked above the same input.

@@ -1,6 +1,6 @@
 # 01 — Folder Structure
 
-Updated for the walkthrough-first product. Anything not in this layout is either legacy or future-phase.
+Updated for the walkthrough-first product. The shipped layout is what the dashboard, API, and widget actually look like as of 2026-05; the "deferred" sections describe pieces that the original design called for but haven't been built yet.
 
 ---
 
@@ -9,26 +9,23 @@ Updated for the walkthrough-first product. Anything not in this layout is either
 ```
 Eregna/
 ├── apps/
-│   ├── eregna/             # Dashboard SPA (TanStack Start / React 19 / Vite)
-│   └── api/                # Bun + Hono — REST + SSE walkthrough streamer
+│   ├── eregna/             # Dashboard SPA (TanStack Router / React 19 / Vite)
+│   └── api/                # Bun + Hono — REST CRUD over Supabase
 ├── packages/
-│   ├── db/                 # Drizzle schema + client + migrations
-│   ├── widget/             # Embeddable widget — shadow DOM player + overlay
-│   ├── walkthrough-core/   # Headless engine: types, executor, store contract
-│   └── ui/                 # Shared design-system components
-├── docs/                   # This folder (walkthrough-first design)
+│   ├── db/                 # Supabase JS client + generated Database types
+│   ├── widget/             # Embeddable widget — shadow DOM player + spotlight overlay
+│   └── ui/                 # Shared design-system primitives + lucide re-exports
+├── docs/                   # This folder
 │   └── legacy/             # Previous chat-only docs, kept for reference
-├── supabase/               # Supabase CLI config (auth + hosted Postgres)
+├── supabase/               # Supabase CLI config + hand-written SQL migrations
 └── turbo.json
 ```
 
-### Why a new `packages/walkthrough-core`?
+### What's not here yet (deferred from original design)
 
-`walkthrough-core` owns **everything that crosses a wire** — HTTP request/response bodies, SSE event frames, postMessage payloads between the dashboard and the widget picker, and the JSON shapes we store in Postgres (`plan_json`, `step_json`, `parent_context_json`). It also owns the headless engine, action schema, and adapter interface — which have **no DOM dependency at the type level** and **no React dependency**.
-
-Putting all of this in one package means there is exactly **one source of truth** for any shape consumed by more than one part of the system. The widget, dashboard, and API all import the same TypeScript types and the same Zod schemas. There is no `api-types.ts` duplicate in the dashboard, no hand-written `WalkthroughStep` in the widget, no Plan schema living next to the planner service. When the contract changes, you change it here and every consumer breaks at compile time.
-
-`packages/ai` from the legacy plan is folded into `apps/api`. Splitting it out only makes sense once we have a second consumer.
+- **`packages/walkthrough-core`** — the original plan called for a shared package that owned every wire type (Plan, Step, Action, stream events) so the dashboard / API / widget couldn't drift. It hasn't been split out; for now the walkthrough types live in `packages/widget/src/types/conversation.ts` and the widget plays a static sample, not a streamed plan. Promote it to a real package as soon as a second consumer (the API streamer) needs the same shapes.
+- **Drizzle ORM** — `packages/db` is a generated-types package over the Supabase JS client, not a Drizzle schema. The design rationale for picking Drizzle is preserved in `data/01-drizzle-schema.md` under "Why Drizzle was on the roadmap"; the shipped path is Supabase types + hand-written SQL in `supabase/migrations/`.
+- **`apps/api/src/routes/walkthroughs.ts`** — the SSE streamer. Sessions persistence exists (`/v1/sessions`); the planner + streamer that fill them with messages and steps do not.
 
 ---
 
@@ -38,38 +35,55 @@ Putting all of this in one package means there is exactly **one source of truth*
 apps/eregna/src/
 ├── routes/
 │   ├── __root.tsx
-│   ├── index.tsx                          # marketing / landing
-│   ├── login.tsx                          # auth page
-│   ├── auth.callback.tsx                  # OAuth redirect
+│   ├── index.tsx                              # marketing / landing
+│   ├── login.tsx                              # auth page
+│   ├── auth.callback.tsx                      # OAuth redirect
+│   ├── api.health.ts                          # health check
 │   └── dashboard/
-│       ├── index.tsx                      # agent list
-│       ├── new.tsx                        # create-agent wizard
-│       └── $agentId/
-│           ├── index.tsx                  # overview + embed snippet
-│           ├── settings.tsx               # name, model, system prompt
-│           └── knowledge/
-│               ├── index.tsx              # page list (MVP: usually one page)
-│               └── $pageId.tsx            # element tree editor (the main UX)
+│       ├── index.tsx                          # agent list + inline "New agent" modal toggle
+│       ├── $agentId/
+│       │   ├── route.tsx                      # layout: agent header + tab bar (Embed / Settings / Knowledge)
+│       │   └── index.tsx                      # Embed tab — snippet, credentials, sessions list
+│       ├── $agentId.settings.tsx              # Settings tab — name, model, prompt, active toggle
+│       ├── $agentId.knowledge.index.tsx       # Knowledge tab — page tree + modal-based add
+│       ├── $agentId.knowledge.$pageId.tsx     # Page editor — per-page detail + elements
+│       └── $agentId.sitemap.tsx               # legacy redirect → /knowledge
 ├── components/
-│   ├── layout/{AppShell,Sidebar,Header}.tsx
-│   ├── agents/{AgentCard,AgentForm,EmbedSnippet}.tsx
-│   ├── knowledge/
-│   │   ├── ElementTree.tsx                # hierarchical tree with DOM selector + description
-│   │   ├── ElementForm.tsx                # label / dom_id / css_selector / description / register_intent
-│   │   └── SelectorPicker.tsx             # paste selector OR click-to-pick via temporary inspector
-│   └── ui/                                # re-exports from @repo/ui
+│   ├── AppChrome.tsx                          # top-level chrome (sidebar + outlet)
+│   ├── Header.tsx
+│   ├── Footer.tsx
+│   ├── ThemeToggle.tsx
+│   ├── agents/
+│   │   ├── AgentCard.tsx
+│   │   └── AgentForm.tsx
+│   ├── dashboard/
+│   │   ├── DashboardSidebar.tsx
+│   │   ├── DashboardBreadcrumbs.tsx
+│   │   └── CopyField.tsx
+│   ├── pages/
+│   │   └── PageTreeView.tsx                   # hierarchical page tree with hover actions
+│   ├── elements/
+│   │   └── AddElementModal.tsx                # "+ element" popup invokable from the tree
+│   └── ui/
+│       └── Modal.tsx                          # portal-based dialog primitive
 ├── lib/
-│   ├── supabase.ts                        # browser auth client only — never DB
-│   ├── auth.tsx                           # AuthProvider + useAuth
-│   ├── api.ts                             # typed fetch → apps/api
+│   ├── supabase.ts                            # browser auth client (sessions/JWT only)
+│   ├── auth.tsx                               # AuthProvider + useAuth
+│   ├── api.ts                                 # typed fetch wrapper → apps/api
+│   ├── api-types.ts                           # client-side request/response shapes
 │   └── utils.ts
 └── hooks/
     ├── useAgents.ts
     ├── usePages.ts
-    └── useElements.ts
+    ├── useElements.ts
+    └── useSessions.ts
 ```
 
 The dashboard **never** talks to the database directly. All persistence flows through `apps/api`. Supabase is used in the dashboard only for Auth (sessions + JWT). This keeps a single place for ownership checks and lets us swap auth providers later.
+
+> **Routing convention.** Files like `$agentId.settings.tsx` and `$agentId.knowledge.index.tsx` use TanStack Router's flat-route dot syntax and resolve as children of `$agentId/route.tsx`. The agent layout (tab bar + breadcrumb) wraps every tab via `<Outlet />`.
+
+> **"Add" forms are modals.** The agent list, "Add page", and "Add element" forms all open through `components/ui/Modal.tsx` rather than inline expanding sections — important enough to call out because the docs in `dashboard/` predate this and described inline forms.
 
 ---
 
@@ -80,132 +94,65 @@ apps/api/src/
 ├── index.ts                               # Bun entry — boots Hono
 ├── app.ts                                 # app factory (testable without listen)
 ├── middleware/
-│   ├── auth.ts                            # verify Supabase JWT, set userId
-│   └── cors.ts
+│   └── auth.ts                            # verify Supabase JWT, set userId on context
 ├── routes/
-│   ├── agents.ts                          # /v1/agents
-│   ├── pages.ts                           # /v1/pages
-│   ├── elements.ts                        # /v1/elements
-│   └── walkthroughs.ts                    # /v1/walkthroughs/run  (SSE)
+│   ├── agents.ts                          # /v1/agents (CRUD)
+│   ├── pages.ts                           # /v1/pages (CRUD)
+│   ├── elements.ts                        # /v1/elements (CRUD)
+│   └── sessions.ts                        # /v1/sessions (visitor session CRUD + heartbeat)
 ├── services/
-│   ├── agent.service.ts
-│   ├── page.service.ts
-│   ├── element.service.ts                 # also generates embedding (Phase 2)
-│   ├── walkthrough.service.ts             # session/message/walkthrough/step persistence
-│   ├── planner.service.ts                 # LLM call #1: query → Plan (uses PlanSchema from walkthrough-core)
-│   └── streamer.service.ts                # LLM call #2: streams Step objects (uses StepSchema from walkthrough-core)
+│   ├── agent.service.ts                   # also generates public_id + secret_key on create
+│   ├── page.service.ts                    # ltree path computation
+│   ├── element.service.ts                 # ltree path computation; strips embedding on read
+│   └── session.service.ts                 # walkthrough_sessions list/create/get/touch
 └── lib/
-    ├── db.ts                              # re-exports drizzle client + schema
-    └── llm.ts                             # OpenAI/Anthropic client factory
+    ├── http.ts                            # jsonError helper
+    └── ltree.ts                           # slugifyLtreeSegment, generatePublicId
 ```
 
-The two LLM stages — **planner** and **streamer** — are split so the planner can run to completion (it picks a page and outlines steps) before the streamer begins emitting playable steps. See `agent/02-pipeline.md`.
+CRUD-only today. The two LLM stages — **planner** and **streamer** — are still on the roadmap and would land as `routes/walkthroughs.ts` plus `services/{planner,streamer,walkthrough}.service.ts`. See `agent/02-pipeline.md` for the intended split.
 
-There is **no `apps/api/src/services/schemas/` directory.** All schemas (Plan, Step, Action, SelectorSpec, wire events, request bodies) live in `packages/walkthrough-core/src/schemas/` and are imported from there. This is what makes the dashboard's typed API client work without duplication and what lets the replay endpoint validate stored JSON against the same Plan schema the planner produces.
+There is no `apps/api/src/services/schemas/` directory — Zod request bodies live inline in the route files, since there's currently no second consumer that needs them.
+
+### CORS
+
+`apps/api/src/app.ts` reads `EREGNA_CORS_ORIGINS` (comma-separated) and falls back to `*` when unset. JWT verification happens via `supabase.auth.getUser(token)` in `middleware/auth.ts`; there is no service-role-key check (RLS is disabled in dev, so the anon key works).
 
 ---
 
-## `packages/db` — Drizzle layer
+## `packages/db` — Supabase types
 
 ```
 packages/db/
 ├── src/
-│   ├── schema/
-│   │   ├── agents.ts
-│   │   ├── pages.ts
-│   │   ├── elements.ts
-│   │   ├── walkthroughSessions.ts
-│   │   └── index.ts                       # barrel: export * from each schema
-│   ├── client.ts                          # drizzle({ client: postgres(url) })
-│   ├── types.ts                           # Zod schemas derived from drizzle-zod
-│   └── seed.ts
-├── drizzle.config.ts                      # drizzle-kit config (output: ./migrations)
-├── migrations/                            # generated SQL files
-└── package.json
+│   ├── client.ts                          # createBrowserClient / createServerClient factories
+│   ├── types.ts                           # Database type (generated-style) — Tables<>, TablesInsert<>, TablesUpdate<>
+│   ├── seed.ts
+│   └── seed-cli.ts
+├── package.json                           # exports: "@repo/db/client", "@repo/db/types"
+└── (no migrations folder — SQL lives in /supabase/migrations)
 ```
 
-Conventions:
-- One file per table. Relations are declared in `relations.ts` alongside the table that owns the foreign key.
-- Zod input/output schemas live in `types.ts` and are **derived** from the drizzle schema via `drizzle-zod`. Hand-written Zod is forbidden — types drift otherwise.
-- `client.ts` exports two factories: `createDbClient(url)` for the API (service role) and a `db` instance for scripts.
+The shipped layer is intentionally lightweight: one file of generated types, one client factory file. Any consumer (api, dashboard, widget) imports `Tables<'agents'>` etc. directly. Hand-edit `types.ts` when you add a table — there is no auto-generator wired up.
 
----
-
-## `packages/walkthrough-core` — Shared contract + headless engine
+### Migrations
 
 ```
-packages/walkthrough-core/src/
-├── types/                                 # pure TS, the canonical wire shapes
-│   ├── plan.ts                            # Plan, PlanStep, PlanStepIntent, BranchInfo
-│   ├── walkthrough.ts                     # Step, Action union, SelectorSpec, PopoverConfig, PopoverAnchor
-│   ├── conversation.ts                    # Conversation, Message, MessagePart, TextPart, WalkthroughPart
-│   ├── timeline.ts                        # Position, Chapter (derived only — never persisted)
-│   └── index.ts                           # barrel
-│
-├── wire/                                  # contracts that cross process boundaries
-│   ├── stream-events.ts                   # WalkthroughStreamEvent discriminated union (SSE frames)
-│   ├── picker.ts                          # PickerMessage union (dashboard ↔ widget picker postMessage)
-│   ├── api.ts                             # request/response envelopes for every /v1 route
-│   └── index.ts
-│
-├── schemas/                               # Zod versions of types + wire (one place, no hand-written Zod elsewhere)
-│   ├── plan.schema.ts                     # PlanSchema, migratePlan
-│   ├── walkthrough.schema.ts              # StepSchema, ActionSchema, SelectorSpecSchema
-│   ├── stream-events.schema.ts            # WalkthroughStreamEventSchema
-│   ├── api.schema.ts                      # body validators for routes
-│   └── index.ts
-│
-├── utils/                                 # pure helpers; safe to call from anywhere
-│   ├── stepDuration.ts                    # computeStepDuration, defaultDuration
-│   ├── timeline.ts                        # buildTimeline(conversation) → Timeline
-│   ├── elementTree.ts                     # flat ↔ tree (used by dashboard editor AND adapter registry)
-│   ├── embed.ts                           # buildEmbedSnippet(publicId) — used by dashboard + marketing
-│   └── ids.ts                             # publicId, slug, ULID helpers
-│
-├── engine/                                # headless playback — no DOM, no React
-│   ├── WalkthroughEngine.ts               # orchestrator
-│   ├── StepExecutor.ts                    # per-step runner
-│   ├── StepQueue.ts                       # append-as-they-stream queue
-│   ├── CleanupStack.ts                    # LIFO teardown
-│   ├── TimelineBuilder.ts                 # (Phase 2) pre-computes timing for seek
-│   └── index.ts
-│
-├── actions/                               # one handler per Action union member
-│   ├── ActionHandlerRegistry.ts
-│   ├── handlers/{highlightElement,scrollTo,popover,waitForClick,waitForElement,...}.ts
-│   └── index.ts
-│
-├── adapters/
-│   └── HostAdapter.ts                     # interface — no DOM code lives here
-│
-└── store/
-    └── WalkthroughStoreContract.ts        # the shape the engine writes into
+supabase/migrations/
+├── 20250430100001_extensions.sql          # pgcrypto, ltree
+├── 20250430100002_profiles.sql
+├── 20250430100003_agents.sql
+├── 20250430100004_pages.sql
+├── 20250430100005_elements.sql
+├── 20250430100006_conversations.sql       # legacy chat tables, kept around
+├── 20250430100007_functions.sql
+├── 20250430100008_rls.sql
+├── 20250430110000_disable_rls.sql         # RLS turned off for MVP
+└── 20250523000001_walkthroughs.sql        # walkthrough_sessions, session_messages,
+                                           # message_text_parts, walkthroughs, walkthrough_steps
 ```
 
-This package depends on **nothing runtime** beyond Zod and a tiny `abortable-sleep` utility. It does not import React, Zustand, or the DOM. The widget plugs in:
-- a `HostAdapter` implementation that does DOM work
-- a Zustand store that satisfies `WalkthroughStoreContract`
-- React components that read the store
-
-This is exactly the boundary the old walkthrough-plan called `CanvasAdapter` — renamed `HostAdapter` because we no longer target React Flow.
-
-### Standing it up — types first, engine later
-
-The package is brought up in two passes:
-
-1. **Pass 1 — contract only.** `types/`, `wire/`, `schemas/`, `utils/`. No engine. This is what unblocks the API, the dashboard, and the widget UI from inventing their own shapes. Ship this **before** any of the other work streams in `02-roadmap.md`.
-2. **Pass 2 — engine.** `engine/`, `actions/`, `adapters/`, `store/`. Lands after the wire format is frozen.
-
-### Import direction
-
-```
-db  →  walkthrough-core  →  widget / api  →  eregna
-```
-
-No back-edges. Enforced by ESLint (`eslint-plugin-boundaries`) or a CI grep. In particular:
-- The dashboard (`apps/eregna`) imports types from walkthrough-core; it does **not** redeclare them in `apps/eregna/src/lib/api-types.ts`.
-- The API (`apps/api`) imports Zod schemas from walkthrough-core to validate request bodies; it does **not** keep a parallel `services/schemas/` directory.
-- The widget (`packages/widget`) imports types + engine from walkthrough-core; it does **not** ship its own `types/conversation.ts`.
+RLS was authored, then disabled in a follow-up migration. The trust model is now "API enforces ownership in the service layer." See `data/02-auth-and-ownership.md`.
 
 ---
 
@@ -214,30 +161,43 @@ No back-edges. Enforced by ESLint (`eslint-plugin-boundaries`) or a CI grep. In 
 ```
 packages/widget/src/
 ├── embed.tsx                              # initWidget() — shadow DOM bootstrap
-├── Widget.tsx                             # root component
+├── dev-main.ts                            # dev entry (hot reload, not shipped)
+├── Widget.tsx                             # WidgetProvider + WidgetInner
+├── widget.css                             # CSS injected into the shadow root
 ├── components/
-│   ├── PlayerBar.tsx                      # play/pause/seek + speed + chat input (merged)
-│   ├── ChatLog.tsx                        # transcript when in "ask" mode
-│   ├── PopoverLayer.tsx                   # popover with typewriter text
-│   └── SpotlightOverlay.tsx               # painted on host body, outside shadow DOM
-├── adapter/
-│   └── DomHostAdapter.ts                  # implements HostAdapter for real DOM
+│   ├── BubbleFAB.tsx                      # bottom-right chat bubble
+│   ├── ChatPopup/
+│   │   ├── index.tsx                      # chat popup container
+│   │   ├── MessageList.tsx
+│   │   └── WalkthroughCard.tsx
+│   ├── PlayerBar/
+│   │   ├── index.tsx                      # transport + composer + speed select
+│   │   └── Scrubber.tsx
+│   └── WalkthroughOverlay/
+│       ├── index.tsx                      # portal'd to document.body
+│       ├── Spotlight.tsx                  # SVG mask cutout around target element
+│       └── Popover.tsx                    # typewriter popover anchored to target
 ├── store/
-│   └── useWalkthroughStore.ts             # Zustand — satisfies WalkthroughStoreContract
+│   └── widget-context.tsx                 # useReducer + Context (no Zustand)
 ├── hooks/
-│   ├── useWalkthrough.ts                  # creates engine, binds adapter+store
-│   ├── useStream.ts                       # SSE → StepQueue.append
-│   └── useTypewriter.ts
-├── styles/widget.css                      # injected into shadow root
-└── overlay.css                            # injected into host document for spotlights
+│   ├── usePlayer.ts                       # requestAnimationFrame tick loop
+│   └── useElementRect.ts                  # tracks target getBoundingClientRect each frame
+├── types/
+│   └── conversation.ts                    # Message/Part/Walkthrough/Step types + timing constants
+└── data/
+    └── sample-conversation.ts             # static conversation used by the player today
 ```
 
 The widget has **two DOM surfaces**:
 
-1. **Shadow DOM mount** — for the player UI (player bar, chat log, popover). CSS-isolated from the host.
-2. **Overlay on host `<body>`** — for spotlight rings, scroll anchors, and element-level decorations that must align pixel-perfect with the host's elements. Shadow DOM can't paint outside itself, and host CSS can fight with `position: fixed` inside shadow. We use a regular `<div data-eregna-overlay>` on the host body with our own scoped class names; collisions are unlikely because they are namespaced.
+1. **Shadow DOM mount** — `<div id="eregna-host">` on the host body, with an open shadow root. The chat popup, player bar, and FAB live here; `widget.css` is injected into the root for CSS isolation.
+2. **Body-level overlay portal** — `WalkthroughOverlay` uses `createPortal(…, document.body)` to paint the spotlight + popover on the host body. It is *not* a separate `<div data-eregna-overlay>` container — the portal target is `document.body` directly, and overlay styles ship in `widget.css` under the same shadow root. Plain CSS for the overlay elements (no shadow isolation needed) lives alongside; class names are `eregna-*` prefixed.
 
-See `05-embed-bootstrap.md` for the full DOM-isolation story.
+See `widget/01-embed-and-bootstrap.md` for the boot sequence and `widget/02-overlay-and-isolation.md` for the isolation rules.
+
+### Why no `packages/walkthrough-core` yet
+
+The conversation/walkthrough types live in `packages/widget/src/types/conversation.ts`. The widget is currently the only consumer (it plays `data/sample-conversation.ts`). When the API streamer arrives and needs to emit the same `Step` shape, lift this file into `packages/walkthrough-core/src/types/conversation.ts` and have both widget + api import from there — that's the trigger to actually create the package, not before.
 
 ---
 
@@ -245,11 +205,18 @@ See `05-embed-bootstrap.md` for the full DOM-isolation story.
 
 | Entity | Convention | Example |
 |---|---|---|
-| Route files | `lowercase.tsx` | `dashboard.tsx` |
-| Component files | `PascalCase.tsx` | `ElementTree.tsx` |
-| Hook files | `camelCase.ts`, prefix `use` | `useWalkthrough.ts` |
-| Drizzle schema | `camelCase.ts` per table | `walkthroughSessions.ts` |
-| Service modules | `camelCase.service.ts` | `planner.service.ts` |
+| Route files | TanStack-flat / `lowercase` | `$agentId.knowledge.index.tsx` |
+| Layout routes | `route.tsx` inside the folder | `dashboard/$agentId/route.tsx` |
+| Component files | `PascalCase.tsx` | `PageTreeView.tsx` |
+| Hook files | `camelCase.ts`, prefix `use` | `useSessions.ts` |
+| Supabase tables | `snake_case` | `walkthrough_sessions` |
+| Service modules | `camelCase.service.ts` | `session.service.ts` |
 | Public IDs | URL-safe slug + 6 random chars | `acme-abc123` |
 
-Cross-package import direction: **`db` → `walkthrough-core` → `widget`/`api` → `eregna`**. No back-edges.
+### Import direction (intended)
+
+```
+db  →  widget / api  →  eregna
+```
+
+No back-edges. Not enforced by tooling yet — relying on code review. The would-be `walkthrough-core` package sits between `db` and `widget / api` when it lands.

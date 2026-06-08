@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Code2, LayoutList, Settings2 } from "@repo/ui/lucide-react";
+import { Code2, History, LayoutList, Settings2 } from "@repo/ui/lucide-react";
 import { useAgent } from "#/hooks/useAgents";
 
 export const Route = createFileRoute("/dashboard/$agentId")({
@@ -31,6 +31,12 @@ function AgentLayout() {
 			to: `/dashboard/${agentId}/knowledge`,
 			icon: LayoutList,
 			active: pathname.startsWith(`/dashboard/${agentId}/knowledge`),
+		},
+		{
+			label: "Sessions",
+			to: `/dashboard/${agentId}/sessions`,
+			icon: History,
+			active: pathname.startsWith(`/dashboard/${agentId}/sessions`),
 		},
 	];
 

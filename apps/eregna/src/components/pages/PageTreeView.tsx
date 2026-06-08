@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, FileText, Folder, Globe, Pencil, Plus, Trash2 } from "@repo/ui/lucide-react";
+import {
+	ChevronRight,
+	FileText,
+	Folder,
+	Globe,
+	Pencil,
+	Plus,
+	Trash2,
+} from "@repo/ui/lucide-react";
 import type { PageItem } from "#/lib/api-types";
+import { AddElementModal } from "#/components/elements/AddElementModal";
 
 interface TreeNode {
 	page: PageItem;
@@ -30,9 +39,16 @@ interface TreeNodeRowProps {
 	depth: number;
 	agentId: string;
 	onDelete: (pageId: string, title: string) => void;
+	onAddElement: (page: PageItem) => void;
 }
 
-function TreeNodeRow({ node, depth, agentId, onDelete }: TreeNodeRowProps) {
+function TreeNodeRow({
+	node,
+	depth,
+	agentId,
+	onDelete,
+	onAddElement,
+}: TreeNodeRowProps) {
 	const [expanded, setExpanded] = useState(true);
 	const hasChildren = node.children.length > 0;
 	const isRoot = !node.page.parent_id;
@@ -78,9 +94,18 @@ function TreeNodeRow({ node, depth, agentId, onDelete }: TreeNodeRowProps) {
 				)}
 
 				<div className="ml-auto hidden shrink-0 items-center gap-1 group-hover:flex">
+					<button
+						type="button"
+						onClick={() => onAddElement(node.page)}
+						title="Add element"
+						className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+					>
+						<Plus className="h-3 w-3" />
+					</button>
 					<Link
 						to="/dashboard/$agentId/knowledge/$pageId"
 						params={{ agentId, pageId: node.page.id }}
+						title="Edit page"
 						className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground no-underline hover:bg-muted hover:text-foreground"
 					>
 						<Pencil className="h-3 w-3" />
@@ -88,6 +113,7 @@ function TreeNodeRow({ node, depth, agentId, onDelete }: TreeNodeRowProps) {
 					<button
 						type="button"
 						onClick={() => onDelete(node.page.id, node.page.title)}
+						title="Delete page"
 						className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
 					>
 						<Trash2 className="h-3 w-3" />
@@ -95,7 +121,8 @@ function TreeNodeRow({ node, depth, agentId, onDelete }: TreeNodeRowProps) {
 				</div>
 			</div>
 
-			{hasChildren && expanded &&
+			{hasChildren &&
+				expanded &&
 				node.children.map((child) => (
 					<TreeNodeRow
 						key={child.page.id}
@@ -103,6 +130,7 @@ function TreeNodeRow({ node, depth, agentId, onDelete }: TreeNodeRowProps) {
 						depth={depth + 1}
 						agentId={agentId}
 						onDelete={onDelete}
+						onAddElement={onAddElement}
 					/>
 				))}
 		</>
@@ -113,34 +141,45 @@ interface PageTreeViewProps {
 	pages: PageItem[];
 	agentId: string;
 	onDelete: (pageId: string, title: string) => void;
-	onAddChild?: (parentId: string) => void;
 }
 
 export function PageTreeView({ pages, agentId, onDelete }: PageTreeViewProps) {
 	const roots = buildTree(pages);
+	const [addElementPage, setAddElementPage] = useState<PageItem | null>(null);
 
 	if (roots.length === 0) {
 		return (
 			<div className="flex flex-col items-center justify-center py-12 text-center">
 				<Plus className="mb-2 h-8 w-8 text-muted-foreground/40" />
 				<p className="text-sm text-muted-foreground">
-					No pages yet. Add a root page below.
+					No pages yet. Add a root page to get started.
 				</p>
 			</div>
 		);
 	}
 
 	return (
-		<div className="py-1">
-			{roots.map((root) => (
-				<TreeNodeRow
-					key={root.page.id}
-					node={root}
-					depth={0}
-					agentId={agentId}
-					onDelete={onDelete}
+		<>
+			<div className="py-1">
+				{roots.map((root) => (
+					<TreeNodeRow
+						key={root.page.id}
+						node={root}
+						depth={0}
+						agentId={agentId}
+						onDelete={onDelete}
+						onAddElement={setAddElementPage}
+					/>
+				))}
+			</div>
+
+			{addElementPage && (
+				<AddElementModal
+					pageId={addElementPage.id}
+					pageTitle={addElementPage.title}
+					onClose={() => setAddElementPage(null)}
 				/>
-			))}
-		</div>
+			)}
+		</>
 	);
 }

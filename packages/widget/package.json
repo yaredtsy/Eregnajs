@@ -17,11 +17,16 @@
   ],
   "scripts": {
     "build": "vite build && tsc -p tsconfig.build.json",
+    "build:embed": "VITE_BUILD_TARGET=embed vite build",
+    "build:all": "pnpm build && pnpm build:embed",
     "dev": "vite",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/walkthrough-core": "workspace:*",
+    "fast-json-patch": "^3.1.1",
+    "nanoid": "^5.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

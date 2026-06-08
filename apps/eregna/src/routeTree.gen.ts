@@ -21,6 +21,7 @@ import { Route as DashboardAgentIdSitemapRouteImport } from './routes/dashboard/
 import { Route as DashboardAgentIdSettingsRouteImport } from './routes/dashboard/$agentId.settings'
 import { Route as DashboardAgentIdKnowledgeIndexRouteImport } from './routes/dashboard/$agentId.knowledge.index'
 import { Route as DashboardAgentIdKnowledgePageIdRouteImport } from './routes/dashboard/$agentId.knowledge.$pageId'
+import { Route as DashboardAgentIdSessionsRouteImport } from './routes/dashboard/$agentId.sessions'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -85,6 +86,12 @@ const DashboardAgentIdKnowledgePageIdRoute =
     path: '/knowledge/$pageId',
     getParentRoute: () => DashboardAgentIdRouteRoute,
   } as any)
+const DashboardAgentIdSessionsRoute =
+  DashboardAgentIdSessionsRouteImport.update({
+    id: '/sessions',
+    path: '/sessions',
+    getParentRoute: () => DashboardAgentIdRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/$agentId/': typeof DashboardAgentIdIndexRoute
   '/dashboard/$agentId/knowledge/$pageId': typeof DashboardAgentIdKnowledgePageIdRoute
   '/dashboard/$agentId/knowledge/': typeof DashboardAgentIdKnowledgeIndexRoute
+  '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -111,6 +119,7 @@ export interface FileRoutesByTo {
   '/dashboard/$agentId': typeof DashboardAgentIdIndexRoute
   '/dashboard/$agentId/knowledge/$pageId': typeof DashboardAgentIdKnowledgePageIdRoute
   '/dashboard/$agentId/knowledge': typeof DashboardAgentIdKnowledgeIndexRoute
+  '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -126,6 +135,7 @@ export interface FileRoutesById {
   '/dashboard/$agentId/': typeof DashboardAgentIdIndexRoute
   '/dashboard/$agentId/knowledge/$pageId': typeof DashboardAgentIdKnowledgePageIdRoute
   '/dashboard/$agentId/knowledge/': typeof DashboardAgentIdKnowledgeIndexRoute
+  '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/dashboard/$agentId/'
     | '/dashboard/$agentId/knowledge/$pageId'
     | '/dashboard/$agentId/knowledge/'
+    | '/dashboard/$agentId/sessions'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/dashboard/$agentId'
     | '/dashboard/$agentId/knowledge/$pageId'
     | '/dashboard/$agentId/knowledge'
+    | '/dashboard/$agentId/sessions'
   id:
     | '__root__'
     | '/'
@@ -168,6 +180,7 @@ export interface FileRouteTypes {
     | '/dashboard/$agentId/'
     | '/dashboard/$agentId/knowledge/$pageId'
     | '/dashboard/$agentId/knowledge/'
+    | '/dashboard/$agentId/sessions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAgentIdKnowledgePageIdRouteImport
       parentRoute: typeof DashboardAgentIdRouteRoute
     }
+    '/dashboard/$agentId/sessions': {
+      id: '/dashboard/$agentId/sessions'
+      path: '/sessions'
+      fullPath: '/dashboard/$agentId/sessions'
+      preLoaderRoute: typeof DashboardAgentIdSessionsRouteImport
+      parentRoute: typeof DashboardAgentIdRouteRoute
+    }
   }
 }
 
@@ -273,6 +293,7 @@ interface DashboardAgentIdRouteRouteChildren {
   DashboardAgentIdIndexRoute: typeof DashboardAgentIdIndexRoute
   DashboardAgentIdKnowledgePageIdRoute: typeof DashboardAgentIdKnowledgePageIdRoute
   DashboardAgentIdKnowledgeIndexRoute: typeof DashboardAgentIdKnowledgeIndexRoute
+  DashboardAgentIdSessionsRoute: typeof DashboardAgentIdSessionsRoute
 }
 
 const DashboardAgentIdRouteRouteChildren: DashboardAgentIdRouteRouteChildren = {
@@ -281,6 +302,7 @@ const DashboardAgentIdRouteRouteChildren: DashboardAgentIdRouteRouteChildren = {
   DashboardAgentIdIndexRoute: DashboardAgentIdIndexRoute,
   DashboardAgentIdKnowledgePageIdRoute: DashboardAgentIdKnowledgePageIdRoute,
   DashboardAgentIdKnowledgeIndexRoute: DashboardAgentIdKnowledgeIndexRoute,
+  DashboardAgentIdSessionsRoute: DashboardAgentIdSessionsRoute,
 }
 
 const DashboardAgentIdRouteRouteWithChildren =

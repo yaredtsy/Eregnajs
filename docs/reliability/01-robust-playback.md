@@ -1,5 +1,7 @@
 # reliability/01 — Robust Playback
 
+> **Status: design spec for the engine that doesn't exist yet.** The widget currently plays a static sample with no DOM resolution, no retries, no streaming. This document is the failure-mode catalog the engine should handle when it's built. Use it as a checklist when implementing the DOM adapter and step executor.
+
 The host page is hostile. Elements appear late, get re-rendered, change selectors. Network drops. The LLM produces a step for an element that's gone. This doc enumerates the failure modes and the engine's response to each.
 
 ---

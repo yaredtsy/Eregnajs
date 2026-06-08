@@ -24,20 +24,20 @@ The previous docs are preserved under `docs/legacy/` for reference. They describ
 │   └────────────────────────────────────┘    └────────────────────────────────────────┘  │
 │                                                                                          │
 └─────────────────┬────────────────────────────────────────────────────────────────────────┘
-                  │   POST /v1/walkthroughs/run   (SSE — NDJSON steps streamed)
+                  │   POST /v1/walkthroughs/run   (SSE — planned, not shipped)
 ┌─────────────────▼─────────────────┐    ┌──────────────────────────────┐
 │  apps/api  (Bun + Hono)           │───▶│  LLM (OpenAI / Anthropic)    │
-│  - planner: query → page → plan   │    └──────────────────────────────┘
-│  - streamer: steps as NDJSON      │
-│  - Drizzle queries for context    │
+│  - CRUD: agents/pages/elements    │    └──────────────────────────────┘
+│  - sessions (widget heartbeat)    │
+│  - planner + streamer: PLANNED    │
 └──────────────┬────────────────────┘
-               │
-┌──────────────▼──────────────────────────┐
-│  Postgres (Supabase-hosted)              │
-│  - agents, sites, pages, elements        │
-│  - walkthrough_sessions, step_events     │
-│  - drizzle-orm schema, no RLS in MVP     │
-└──────────────────────────────────────────┘
+               │  Supabase JS client (RLS off — ownership in service layer)
+┌──────────────▼──────────────────────────────────────────────────┐
+│  Postgres (Supabase-hosted)                                      │
+│  - agents, pages, elements                                       │
+│  - walkthrough_sessions, session_messages, message_text_parts,   │
+│    walkthroughs, walkthrough_steps                               │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -48,11 +48,11 @@ The previous docs are preserved under `docs/legacy/` for reference. They describ
 |---|---|---|
 | Output | Markdown chat reply | **Stream of `Step` objects** (actions + popover) |
 | Visitor sees | Bubble with text | **Highlighted DOM + typewriter popover**, video-like |
-| Element registration | Description + embedding | Same fields, plus **hierarchical description tree** and `register_intent` (what users do here) |
-| Retrieval | pgvector RAG over elements | MVP: **whole-page context** (full element tree) — pgvector deferred to Phase 2 |
-| Persistence | conversations + messages | **walkthrough_sessions** with replayable step events |
-| ORM | Supabase JS client + SQL | **Drizzle ORM**, schema in `packages/db` |
-| Auth/RLS | Supabase Auth + RLS on every table | Supabase Auth (JWT) at API edge, **ownership in service layer**, no RLS |
+| Element registration | Description + embedding | Same fields, hierarchical via `ltree` (no `register_intent` yet — deferred until the planner exists) |
+| Retrieval | pgvector RAG over elements | MVP: planned to feed full element tree to LLM — pgvector deferred (`embedding` column is `text`, never written) |
+| Persistence | conversations + messages | **walkthrough_sessions → session_messages → (message_text_parts | walkthroughs → walkthrough_steps)** |
+| ORM | Supabase JS client + SQL | **Supabase JS client + generated `Database` types** in `packages/db`. (Drizzle was on the original roadmap; not adopted yet.) |
+| Auth/RLS | Supabase Auth + RLS on every table | Supabase Auth (JWT) at API edge, **ownership in service layer**, RLS authored then disabled |
 | Widget | React chat UI in shadow DOM | Same shadow DOM mount + **overlay painted on host body** for spotlights |
 
 ---
@@ -92,16 +92,16 @@ docs/
 └── legacy/                   ← retired chat-only docs, for reference
 ```
 
-| Folder | Files | Read it when… |
+| Folder | Status | Read it when… |
 |---|---|---|
-| `dashboard/` | `01-registration-flow.md`, `02-element-tree-editor.md` | Building dashboard screens or thinking about how customers register elements |
-| `data/` | `01-drizzle-schema.md`, `02-auth-and-ownership.md` | Touching the DB schema or auth boundary |
-| `api/` | `01-routes.md`, `02-streaming-protocol.md` | Adding a new endpoint or changing the SSE wire format |
-| `widget/` | `01-embed-and-bootstrap.md`, `02-overlay-and-isolation.md` | Working on how the widget mounts and isolates from the host |
-| `engine/` | `01-action-schema.md`, `02-engine-and-executor.md`, `03-step-queue.md`, `04-dom-adapter.md` | Anything in `packages/walkthrough-core` or the DOM driver |
-| `player/` | `00-timeline-model.md`, `01-store-and-controls.md`, `02-pause-and-branch.md` | Conversation/message shape, player UI (Bar + Popup, bubble vs. detached), pause-to-ask |
-| `agent/` | `01-planning-pipeline.md`, `02-context-strategy.md` | Prompt design, page selection, what context we send to the LLM |
-| `reliability/` | `01-robust-playback.md` | Edge cases: missing nodes, late streams, retries |
+| `dashboard/` | **shipped** — describes the running UX | Building dashboard screens or thinking about how customers register elements |
+| `data/` | **shipped** — schema + auth model match reality | Touching the DB schema or auth boundary |
+| `api/` | **partly shipped** — CRUD routes real; streaming protocol is a spec | Adding a new endpoint or thinking about the SSE wire format |
+| `widget/` | **shipped** — boot, shadow DOM, overlay portal as built | Working on how the widget mounts and isolates from the host |
+| `engine/` | **design spec** — engine not yet built | Anything in the future `packages/walkthrough-core` or the DOM driver |
+| `player/` | **partly shipped** — Bar/Popup/store built; branch/scrub-to-live not | Conversation/message shape, player UI, pause-to-ask |
+| `agent/` | **design spec** — no LLM call yet | Prompt design, page selection, planner/streamer split |
+| `reliability/` | **design spec** — failure-mode checklist for the engine work | Edge cases: missing nodes, late streams, retries |
 
 ---
 

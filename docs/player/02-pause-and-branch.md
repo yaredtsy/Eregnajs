@@ -1,5 +1,7 @@
 # player/02 — Pause & Follow-up (Branch)
 
+> **Status.** Pause is shipped; follow-up branching is not. The widget can pause/resume a walkthrough through `usePlayer` + the reducer, but there is no agent to generate a follow-up walkthrough, and `parentContext` is plumbed through the types but only ever read for the static sample. This doc is the design for when the streamer arrives.
+
 The defining UX of Eregna: at any point during a walkthrough the visitor can pause, ask a follow-up, and the agent generates a new walkthrough that picks up from that exact point. There is no tree, no fork graph — just the next `Message` in the conversation, carrying a `Position` that says *where I was when I asked*. The Timeline (`00-timeline-model.md`) stitches it end-to-end.
 
 This doc specifies the behavior. The conversation/message shape is in `00-timeline-model.md`; the Bar and Popup surfaces are in `01-store-and-controls.md`.

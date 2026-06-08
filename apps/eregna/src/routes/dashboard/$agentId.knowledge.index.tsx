@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { Modal } from "#/components/ui/Modal";
 import { PageTreeView } from "#/components/pages/PageTreeView";
 import { useCreatePage, useDeletePage, usePages } from "#/hooks/usePages";
 
@@ -13,11 +14,19 @@ function KnowledgeIndexPage() {
 	const createPage = useCreatePage(agentId);
 	const deletePage = useDeletePage(agentId);
 
+	const [showAddPage, setShowAddPage] = useState(false);
 	const [title, setTitle] = useState("");
 	const [parentId, setParentId] = useState("");
 	const [urlPattern, setUrlPattern] = useState("");
 	const [formError, setFormError] = useState<string | null>(null);
-	const [showForm, setShowForm] = useState(false);
+
+	function openAddPage() {
+		setTitle("");
+		setParentId("");
+		setUrlPattern("");
+		setFormError(null);
+		setShowAddPage(true);
+	}
 
 	async function addPage(e: React.FormEvent) {
 		e.preventDefault();
@@ -30,10 +39,7 @@ function KnowledgeIndexPage() {
 				parent_id: parentId || null,
 				url_pattern: urlPattern.trim() || null,
 			});
-			setTitle("");
-			setParentId("");
-			setUrlPattern("");
-			setShowForm(false);
+			setShowAddPage(false);
 		} catch (err) {
 			setFormError(err instanceof Error ? err.message : "Could not create page");
 		}
@@ -54,8 +60,7 @@ function KnowledgeIndexPage() {
 	}
 
 	return (
-		<div className="space-y-6">
-			{/* Tree panel */}
+		<>
 			<section className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
 				<div className="flex items-center justify-between border-b border-border px-5 py-3">
 					<div>
@@ -68,10 +73,10 @@ function KnowledgeIndexPage() {
 					</div>
 					<button
 						type="button"
-						onClick={() => setShowForm((v) => !v)}
-						className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-colors"
+						onClick={openAddPage}
+						className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
 					>
-						{showForm ? "Cancel" : "+ Add page"}
+						+ Add page
 					</button>
 				</div>
 
@@ -90,39 +95,33 @@ function KnowledgeIndexPage() {
 				)}
 			</section>
 
-			{/* Add page form */}
-			{showForm && (
-				<section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-					<h2 className="mb-4 text-sm font-semibold text-foreground">
-						Add page
-					</h2>
+			{showAddPage && (
+				<Modal title="Add page" onClose={() => setShowAddPage(false)}>
 					{formError && (
 						<p className="mb-3 text-sm text-destructive" role="alert">
 							{formError}
 						</p>
 					)}
-					<form
-						onSubmit={(e) => void addPage(e)}
-						className="grid gap-4 sm:grid-cols-2"
-					>
-						<div className="sm:col-span-2">
+					<form onSubmit={(e) => void addPage(e)} className="space-y-4">
+						<div>
 							<label
 								htmlFor="pg-title"
 								className="mb-1 block text-xs font-medium text-muted-foreground"
 							>
-								Title *
+								Title <span className="text-destructive">*</span>
 							</label>
 							<input
 								id="pg-title"
+								autoFocus
 								value={title}
 								onChange={(e) => setTitle(e.target.value)}
 								required
 								maxLength={200}
-								className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
 								placeholder="Documentation"
-								autoFocus
+								className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
 							/>
 						</div>
+
 						<div>
 							<label
 								htmlFor="pg-url"
@@ -135,10 +134,11 @@ function KnowledgeIndexPage() {
 								value={urlPattern}
 								onChange={(e) => setUrlPattern(e.target.value)}
 								maxLength={500}
-								className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
 								placeholder="/docs/*"
+								className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary"
 							/>
 						</div>
+
 						<div>
 							<label
 								htmlFor="pg-parent"
@@ -160,25 +160,26 @@ function KnowledgeIndexPage() {
 								))}
 							</select>
 						</div>
-						<div className="sm:col-span-2 flex gap-2">
-							<button
-								type="submit"
-								disabled={createPage.isPending}
-								className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
-							>
-								{createPage.isPending ? "Creating…" : "Create page"}
-							</button>
+
+						<div className="flex justify-end gap-2 pt-1">
 							<button
 								type="button"
-								onClick={() => setShowForm(false)}
-								className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+								onClick={() => setShowAddPage(false)}
+								className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
 							>
 								Cancel
 							</button>
+							<button
+								type="submit"
+								disabled={createPage.isPending}
+								className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 transition-opacity"
+							>
+								{createPage.isPending ? "Creating…" : "Create page"}
+							</button>
 						</div>
 					</form>
-				</section>
+				</Modal>
 			)}
-		</div>
+		</>
 	);
 }

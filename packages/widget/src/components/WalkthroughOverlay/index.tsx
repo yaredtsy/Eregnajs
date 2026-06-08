@@ -24,8 +24,13 @@ export function WalkthroughOverlay() {
   if (!step || !isActive) return null;
 
   const popover = step.popover;
+
+  // Live mode: body grows via patches — render what's arrived in the store.
+  // History mode: simulate typewriter effect via offset-driven slice.
   const visibleText = popover
-    ? popover.body.slice(0, Math.floor(localOffsetMs / TYPEWRITER_MS_PER_CHAR))
+    ? state.playMode === "live"
+      ? popover.body
+      : popover.body.slice(0, Math.floor(localOffsetMs / TYPEWRITER_MS_PER_CHAR))
     : "";
 
   return createPortal(

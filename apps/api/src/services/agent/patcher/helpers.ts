@@ -1,0 +1,200 @@
+import type { Conversation, WalkthroughChapter, WalkthroughStep, WalkthroughAction, StepStatus, WalkthroughStatus, MessageStatus } from "@repo/walkthrough-core";
+
+// Granular mutation helpers — one function per atomic change on the Conversation mirror.
+// The fast-json-patch observer on `createPatcher` sees each mutation and emits an op.
+
+export function addUserMessage(
+  conv: Conversation,
+  id: string,
+  text: string,
+): void {
+  conv.messages.push({
+    id,
+    role: "user",
+    parts: [{ type: "text", text }],
+    status: "complete",
+    createdAt: Date.now(),
+  });
+}
+
+export function addAssistantMessage(conv: Conversation, id: string): void {
+  conv.messages.push({
+    id,
+    role: "assistant",
+    parts: [],
+    status: "streaming",
+    createdAt: Date.now(),
+  });
+}
+
+export function appendTextChunk(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  chunk: string,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "text") {
+    part.text += chunk;
+  }
+}
+
+export function addTextPart(
+  conv: Conversation,
+  messageIndex: number,
+  initialText = "",
+): number {
+  const msg = conv.messages[messageIndex];
+  if (!msg) throw new Error(`No message at index ${messageIndex}`);
+  msg.parts.push({ type: "text", text: initialText });
+  return msg.parts.length - 1;
+}
+
+export function addWalkthroughPart(
+  conv: Conversation,
+  messageIndex: number,
+  walkthroughId: string,
+  planGoal: string,
+  planRationale?: string,
+): number {
+  const msg = conv.messages[messageIndex];
+  if (!msg) throw new Error(`No message at index ${messageIndex}`);
+  msg.parts.push({
+    type: "walkthrough",
+    walkthroughId,
+    planGoal,
+    planRationale,
+    status: "planning",
+    chapters: [],
+    steps: [],
+    parentContext: null,
+  });
+  return msg.parts.length - 1;
+}
+
+export function addChapter(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  chapter: WalkthroughChapter,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    part.chapters.push(chapter);
+  }
+}
+
+export function setWalkthroughStatus(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  status: WalkthroughStatus,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    part.status = status;
+  }
+}
+
+export function addStep(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  step: WalkthroughStep,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    part.steps.push(step);
+  }
+}
+
+export function setStepStatus(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  stepIndex: number,
+  status: StepStatus,
+  skipReason?: string,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    const step = part.steps[stepIndex];
+    if (step) {
+      step.status = status;
+      if (skipReason !== undefined) step.skipReason = skipReason;
+    }
+  }
+}
+
+export function setChapterStepIndex(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  chapterIndex: number,
+  stepIndex: number,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    const chapter = part.chapters[chapterIndex];
+    if (chapter) chapter.stepIndex = stepIndex;
+  }
+}
+
+export function appendPopoverChunk(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  stepIndex: number,
+  chunk: string,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    const step = part.steps[stepIndex];
+    if (step?.popover) {
+      step.popover.body += chunk;
+    }
+  }
+}
+
+export function initStepPopover(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  stepIndex: number,
+  elementId?: string,
+  title?: string,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    const step = part.steps[stepIndex];
+    if (step) {
+      step.popover = { body: "", title, elementId };
+    }
+  }
+}
+
+export function setMessageStatus(
+  conv: Conversation,
+  messageIndex: number,
+  status: MessageStatus,
+): void {
+  const msg = conv.messages[messageIndex];
+  if (msg) msg.status = status;
+}
+
+export function failWalkthrough(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  errorMessage: string,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    part.status = "error";
+  }
+  const msg = conv.messages[messageIndex];
+  if (msg) {
+    msg.status = "error";
+    msg.parts.push({ type: "text", text: `Error: ${errorMessage}` });
+  }
+}

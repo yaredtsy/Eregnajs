@@ -1,5 +1,7 @@
 # agent/01 — Overview
 
+> **Status: design spec, not shipped.** No LLM call goes through the API today — there is no planner, no streamer, no provider abstraction. These `agent/*` docs are the design we'll implement against. The shipped API is CRUD-only (see `api/01-routes.md`).
+
 Start here. Read top-to-bottom: each subsequent doc is one layer more specific.
 
 ```

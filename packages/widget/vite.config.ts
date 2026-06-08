@@ -7,22 +7,44 @@ import { defineConfig } from "vite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
+const shared = {
   plugins: [tailwindcss(), react()],
+};
+
+// ESM library — imported by monorepo apps and downstream bundlers.
+const esmBuild = defineConfig({
+  ...shared,
   build: {
     lib: {
       entry: path.resolve(__dirname, "src/index.ts"),
       name: "EregnaWidget",
-      formats: ["es", "iife"],
-      fileName: (format) =>
-        format === "es" ? "eregna-widget.mjs" : "eregna-widget.iife.js",
+      formats: ["es"],
+      fileName: () => "eregna-widget.mjs",
     },
     rollupOptions: {
-      output: {
-        assetFileNames: "eregna-widget.[ext]",
-      },
+      output: { assetFileNames: "eregna-widget.[ext]" },
     },
     sourcemap: true,
     emptyOutDir: true,
   },
 });
+
+// IIFE CDN embed — the self-bootstrapping script for the <script> tag.
+const iifeBuild = defineConfig({
+  ...shared,
+  build: {
+    lib: {
+      entry: path.resolve(__dirname, "src/embed-auto.ts"),
+      name: "EregnaEmbed",
+      formats: ["iife"],
+      fileName: () => "embed.iife.js",
+    },
+    rollupOptions: {
+      output: { assetFileNames: "embed.[ext]" },
+    },
+    sourcemap: true,
+    emptyOutDir: false,
+  },
+});
+
+export default process.env.VITE_BUILD_TARGET === "embed" ? iifeBuild : esmBuild;

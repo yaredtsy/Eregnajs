@@ -8,6 +8,7 @@ export const SAMPLE_CONVERSATION: Conversation = {
       id: "msg_01",
       role: "user",
       parts: [{ type: "text", text: "How do I create my first agent?" }],
+      status: "complete",
       createdAt: Date.now() - 60_000,
     },
     {
@@ -24,17 +25,49 @@ export const SAMPLE_CONVERSATION: Conversation = {
           planGoal: "Create your first Eregna agent",
           planRationale:
             "Walk through the dashboard to show agent creation end-to-end.",
+          status: "complete",
           chapters: [
-            { title: "Welcome to the dashboard", stepIndex: 0 },
-            { title: "Your agents list", stepIndex: 1 },
-            { title: "Open the new-agent form", stepIndex: 2 },
-            { title: "Name your agent", stepIndex: 3 },
-            { title: "Set the site URL", stepIndex: 4 },
-            { title: "Submit and you're done", stepIndex: 5 },
+            {
+              title: "Welcome to the dashboard",
+              description: "Orient the user to the agents dashboard.",
+              elementId: "agents-page-hero",
+              stepIndex: 0,
+            },
+            {
+              title: "Your agents list",
+              description: "Show where existing agents appear.",
+              elementId: "agents-grid",
+              stepIndex: 1,
+            },
+            {
+              title: "Open the new-agent form",
+              description: "Guide user to the create button.",
+              elementId: "new-agent-btn",
+              stepIndex: 2,
+            },
+            {
+              title: "Name your agent",
+              description: "Fill in the agent name field.",
+              elementId: "agent-name-field",
+              stepIndex: 3,
+            },
+            {
+              title: "Set the site URL",
+              description: "Enter the target website URL.",
+              elementId: "agent-url-field",
+              stepIndex: 4,
+            },
+            {
+              title: "Submit and you're done",
+              description: "Submit the form to create the agent.",
+              elementId: "new-agent-form-section",
+              stepIndex: 5,
+            },
           ],
           steps: [
             {
               id: "step_01",
+              status: "done",
               actions: [
                 { type: "scroll-to", elementId: "agents-page-hero" },
                 { type: "highlight", elementId: "agents-page-hero" },
@@ -47,6 +80,7 @@ export const SAMPLE_CONVERSATION: Conversation = {
             },
             {
               id: "step_02",
+              status: "done",
               actions: [
                 { type: "scroll-to", elementId: "agents-grid" },
                 { type: "highlight", elementId: "agents-grid" },
@@ -59,6 +93,7 @@ export const SAMPLE_CONVERSATION: Conversation = {
             },
             {
               id: "step_03",
+              status: "done",
               actions: [
                 { type: "scroll-to", elementId: "new-agent-btn" },
                 { type: "highlight", elementId: "new-agent-btn" },
@@ -71,6 +106,7 @@ export const SAMPLE_CONVERSATION: Conversation = {
             },
             {
               id: "step_04",
+              status: "done",
               actions: [
                 { type: "scroll-to", elementId: "new-agent-form-section" },
                 { type: "highlight", elementId: "agent-name-field" },
@@ -83,6 +119,7 @@ export const SAMPLE_CONVERSATION: Conversation = {
             },
             {
               id: "step_05",
+              status: "done",
               actions: [{ type: "highlight", elementId: "agent-url-field" }],
               popover: {
                 title: "Set the site URL",
@@ -92,6 +129,7 @@ export const SAMPLE_CONVERSATION: Conversation = {
             },
             {
               id: "step_06",
+              status: "done",
               actions: [
                 { type: "highlight", elementId: "new-agent-form-section" },
               ],
@@ -105,12 +143,14 @@ export const SAMPLE_CONVERSATION: Conversation = {
           parentContext: null,
         },
       ],
+      status: "complete",
       createdAt: Date.now() - 59_000,
     },
     {
       id: "msg_03",
       role: "user",
       parts: [{ type: "text", text: "What AI models are available?" }],
+      status: "complete",
       createdAt: Date.now() - 10_000,
     },
     {
@@ -122,6 +162,7 @@ export const SAMPLE_CONVERSATION: Conversation = {
           text: "Currently Eregna's planning pipeline supports OpenAI (GPT-4o) and Anthropic (Claude 3.5 Sonnet) on the backend. You can switch models per-agent in the agent settings once you've created one — model selection is coming to the dashboard in the next release.",
         },
       ],
+      status: "complete",
       createdAt: Date.now() - 9_000,
     },
   ],

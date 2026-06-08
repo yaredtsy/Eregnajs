@@ -1,6 +1,6 @@
 import {
   createContext,
-  useContext,
+  use,
   useReducer,
   type ReactNode,
 } from "react";
@@ -10,10 +10,13 @@ import type {
   WalkthroughPosition,
   PlaybackStatus,
   PlaybackSpeed,
+  PatchFrame,
+  StepStatus,
 } from "../types/conversation";
-import { computeStepDuration } from "../types/conversation";
+import { computeStepDuration, applyPatchFrame } from "../types/conversation";
 
 export type WidgetMode = "closed" | "bubble" | "detached";
+export type PlayMode = "history" | "live";
 
 export interface WidgetState {
   mode: WidgetMode;
@@ -24,6 +27,7 @@ export interface WidgetState {
   speed: PlaybackSpeed;
   stepOffsetMs: number;
   composerValue: string;
+  playMode: PlayMode;
 }
 
 export type WidgetAction =
@@ -36,7 +40,15 @@ export type WidgetAction =
   | { type: "NEXT_STEP" }
   | { type: "SET_SPEED"; speed: PlaybackSpeed }
   | { type: "SET_COMPOSER"; value: string }
-  | { type: "MARK_READ" };
+  | { type: "MARK_READ" }
+  | { type: "APPLY_PATCH"; frame: PatchFrame }
+  | { type: "SET_PLAY_MODE"; playMode: PlayMode }
+  | { type: "SET_STEP_STATUS"; walkthroughId: string; stepIndex: number; status: StepStatus }
+  | { type: "SET_CONVERSATION"; conversation: Conversation };
+
+// ---------------------------------------------------------------------------
+// Pure helpers (no side effects)
+// ---------------------------------------------------------------------------
 
 function findWalkthrough(
   conversation: Conversation,
@@ -94,14 +106,17 @@ function getActiveWt(state: WidgetState): WalkthroughPart | null {
   return findWalkthrough(state.conversation, state.activeWalkthroughId);
 }
 
+// ---------------------------------------------------------------------------
+// Reducer
+// ---------------------------------------------------------------------------
+
 function reducer(state: WidgetState, action: WidgetAction): WidgetState {
   switch (action.type) {
     case "SET_MODE":
       return {
         ...state,
         mode: action.mode,
-        bubbleHasUnread:
-          action.mode === "bubble" ? false : state.bubbleHasUnread,
+        bubbleHasUnread: action.mode === "bubble" ? false : state.bubbleHasUnread,
       };
 
     case "PLAY_WALKTHROUGH":
@@ -170,10 +185,55 @@ function reducer(state: WidgetState, action: WidgetAction): WidgetState {
     case "MARK_READ":
       return { ...state, bubbleHasUnread: false };
 
+    case "APPLY_PATCH": {
+      const newConv = applyPatchFrame(state.conversation, action.frame);
+      // In live mode, auto-activate the first walkthrough that enters "playing" status.
+      let newActiveId = state.activeWalkthroughId;
+      if (state.playMode === "live" && !newActiveId) {
+        outer: for (const msg of newConv.messages) {
+          for (const part of msg.parts) {
+            if (part.type === "walkthrough" && part.status === "playing") {
+              newActiveId = part.walkthroughId;
+              break outer;
+            }
+          }
+        }
+      }
+      return { ...state, conversation: newConv, activeWalkthroughId: newActiveId };
+    }
+
+    case "SET_PLAY_MODE":
+      return { ...state, playMode: action.playMode };
+
+    case "SET_STEP_STATUS": {
+      const conv = state.conversation;
+      const messages = conv.messages.map((msg) => ({
+        ...msg,
+        parts: msg.parts.map((part) => {
+          if (part.type !== "walkthrough" || part.walkthroughId !== action.walkthroughId)
+            return part;
+          return {
+            ...part,
+            steps: part.steps.map((s, i) =>
+              i === action.stepIndex ? { ...s, status: action.status } : s,
+            ),
+          };
+        }),
+      }));
+      return { ...state, conversation: { ...conv, messages } };
+    }
+
+    case "SET_CONVERSATION":
+      return { ...state, conversation: action.conversation };
+
     default:
       return state;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Context + Provider
+// ---------------------------------------------------------------------------
 
 interface WidgetContextValue {
   state: WidgetState;
@@ -184,7 +244,8 @@ interface WidgetContextValue {
   totalMs: number;
 }
 
-const WidgetContext = createContext<WidgetContextValue | null>(null);
+// Non-null: consuming components must be inside WidgetProvider.
+export const WidgetContext = createContext<WidgetContextValue | null>(null);
 
 export function WidgetProvider({
   conversation,
@@ -202,6 +263,7 @@ export function WidgetProvider({
     speed: 1,
     stepOffsetMs: 0,
     composerValue: "",
+    playMode: "history",
   });
 
   const activeWt = getActiveWt(state);
@@ -218,12 +280,17 @@ export function WidgetProvider({
   );
 }
 
-export function useWidget() {
-  const ctx = useContext(WidgetContext);
+// ---------------------------------------------------------------------------
+// Hooks — use(Context) is the React 19 pattern; works in loops/conditions
+// ---------------------------------------------------------------------------
+
+export function useWidget(): WidgetContextValue {
+  const ctx = use(WidgetContext);
   if (!ctx) throw new Error("useWidget must be used inside WidgetProvider");
   return ctx;
 }
 
-export function useWidgetDispatch() {
+// dispatch from useReducer is guaranteed stable by React — safe to expose.
+export function useWidgetDispatch(): React.Dispatch<WidgetAction> {
   return useWidget().dispatch;
 }

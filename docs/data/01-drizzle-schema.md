@@ -1,8 +1,23 @@
-# data/01 — Drizzle Schema
+# data/01 — Database Schema
 
-All persistence is Drizzle ORM against the Supabase-hosted Postgres. Schema files live in `packages/db/src/schema/`, one file per table. Migrations are generated with `drizzle-kit` into `packages/db/migrations/` and applied with the Supabase CLI (or `drizzle-kit push` in dev).
+> **Naming note.** This file is still called `01-drizzle-schema.md` for path stability with prior links — but the shipped layer is **not** Drizzle. See "Why not Drizzle (yet)" below for what changed.
 
-Extensions required: `pgcrypto` (for `gen_random_uuid()`), `ltree`, `vector` (pgvector — installed now for Phase 2 even though MVP doesn't query it).
+All persistence is the Supabase-hosted Postgres. Migrations are hand-written SQL files in `supabase/migrations/` and applied via the Supabase CLI. The TypeScript types consumed by the API and dashboard live in `packages/db/src/types.ts` and are written in the generated-style `Database` shape (`Tables<>`, `TablesInsert<>`, `TablesUpdate<>`).
+
+Extensions required: `pgcrypto` (for `gen_random_uuid()`), `ltree`. (`vector` / pgvector is **not** currently enabled — embedding generation deferred to Phase 2.)
+
+---
+
+## Why not Drizzle (yet)
+
+The original design called for Drizzle ORM + `drizzle-zod` so that table schemas and Zod request validators were derived from one source. The shipped path is simpler:
+
+- **Schema** lives in plain SQL files under `supabase/migrations/`.
+- **Types** are hand-maintained in `packages/db/src/types.ts` in the same shape Supabase's CLI generator emits (`Database['public']['Tables']['agents']['Row']`).
+- **Runtime client** is `@supabase/supabase-js` via `createServerClient()` in `packages/db/src/client.ts`.
+- **Request validators** are inline Zod schemas in each Hono route file.
+
+This trades a bit of duplication (Zod bodies are written by hand instead of derived) for one fewer build step and zero ORM lock-in. Drizzle is still a sensible upgrade when (a) the team grows and the duplication starts to hurt, or (b) we want trigger-managed migrations. Until then, when you add a column: edit the migration SQL, then add the field to `packages/db/src/types.ts`.
 
 ---
 
@@ -12,267 +27,257 @@ Extensions required: `pgcrypto` (for `gen_random_uuid()`), `ltree`, `vector` (pg
 profiles  (mirrors auth.users)
    │
    └──< agents
-          ├──< pages                    (ltree hierarchy, one site = one agent)
-          │      └──< elements          (ltree hierarchy within a page)
+          ├──< pages                       (ltree hierarchy; one site = one agent)
+          │      └──< elements             (ltree hierarchy within a page)
           │
-          └──< walkthrough_sessions     (one per visitor query)
-                 └──< walkthrough_steps (every Step the streamer emitted)
+          └──< walkthrough_sessions        (one per visitor session — multiple messages)
+                 └──< session_messages    (user or assistant, ordered by created_at)
+                        ├──< message_text_parts        (text parts of a message)
+                        └──< walkthroughs              (a walkthrough part on an assistant message)
+                               └──< walkthrough_steps  (individual steps, ordered by step_index)
 ```
 
-Conversations and messages from the legacy schema are gone — replaced by `walkthrough_sessions` which subsume them. A "chat-only" reply is just a session with zero steps and a popover-only narration.
+> **A session is not a single query.** A session lasts as long as the visitor's widget is open. Inside it, messages alternate user ↔ assistant. An assistant message may carry *text parts* (small narration chunks) and at most one *walkthrough part* (the actual stepped guidance). This is the same Message/Parts shape the widget renders.
+
+The legacy `conversations` + `messages` tables from the chat-only product still exist in earlier migrations but are unused by the new code path.
 
 ---
 
 ## `agents`
 
-```ts
-// packages/db/src/schema/agents.ts
-import { pgTable, uuid, text, boolean, timestamp } from 'drizzle-orm/pg-core'
-import { profiles } from './profiles'
-
-export const agents = pgTable('agents', {
-  id:           uuid('id').primaryKey().defaultRandom(),
-  ownerId:      uuid('owner_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
-
-  name:         text('name').notNull(),
-  description:  text('description'),
-  websiteUrl:   text('website_url').notNull(),       // origin we lock pages to
-
-  publicId:     text('public_id').notNull().unique(), // safe in <script>
-  secretKey:    text('secret_key').notNull(),         // server-side only
-
-  model:        text('model').notNull().default('gpt-4o-mini'),
-  systemPrompt: text('system_prompt'),
-  isActive:     boolean('is_active').notNull().default(true),
-
-  createdAt:    timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt:    timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+```sql
+-- supabase/migrations/20250430100003_agents.sql
+create table public.agents (
+  id            uuid primary key default gen_random_uuid(),
+  owner_id      uuid not null references public.profiles(id) on delete cascade,
+  name          text not null,
+  description   text,
+  website_url   text not null,
+  public_id     text not null unique,           -- safe in <script>
+  secret_key    text not null,                  -- server-side only
+  model         text not null default 'gpt-4o-mini',
+  system_prompt text,
+  is_active     boolean not null default true,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
 ```
 
-Indexes: `(owner_id)`, unique `(public_id)`.
-
-`secret_key` is **never** returned to the dashboard client. The agent service strips it on read.
+`secret_key` is generated server-side (`crypto.randomUUID()`) on insert. The agent service does **not** strip it on `getByIdForUser` because the Embed tab needs it; routes that return agent rows to the browser are gated by JWT-verified ownership.
 
 ---
 
 ## `pages`
 
-```ts
-// packages/db/src/schema/pages.ts
-import { pgTable, uuid, text, integer, timestamp, unique, customType } from 'drizzle-orm/pg-core'
-import { agents } from './agents'
-
-// ltree isn't built-in; use a custom type
-const ltree = customType<{ data: string; driverData: string }>({
-  dataType: () => 'ltree',
-})
-
-export const pages = pgTable('pages', {
-  id:          uuid('id').primaryKey().defaultRandom(),
-  agentId:     uuid('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
-
-  path:        ltree('path').notNull(),
-  parentId:    uuid('parent_id').references((): any => pages.id, { onDelete: 'cascade' }),
-
-  title:       text('title').notNull(),
-  urlPattern:  text('url_pattern'),
-  description: text('description'),
-
-  sortOrder:   integer('sort_order').notNull().default(0),
-
-  createdAt:   timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt:   timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-}, (t) => ({
-  uniqAgentPath: unique('pages_agent_path_uq').on(t.agentId, t.path),
-}))
-```
-
-GiST index on `path` is added via a raw-SQL migration step — Drizzle doesn't model GiST yet:
-
 ```sql
-create index pages_path_idx on pages using gist(path);
+-- supabase/migrations/20250430100004_pages.sql
+create table public.pages (
+  id          uuid primary key default gen_random_uuid(),
+  agent_id    uuid not null references public.agents(id) on delete cascade,
+  path        ltree not null,
+  parent_id   uuid references public.pages(id) on delete cascade,
+  title       text not null,
+  url_pattern text,
+  description text,
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique (agent_id, path)
+);
+
+create index pages_path_idx on public.pages using gist(path);
 ```
+
+`path` is computed in the API (`apps/api/src/services/page.service.ts → computePagePath`) by slugifying the title and concatenating to the parent's path. The first root page on an agent gets path `root`; subsequent roots get `root_<slug>`. The `nextUniquePath` helper appends a random suffix on collision.
 
 ---
 
 ## `elements`
 
-```ts
-// packages/db/src/schema/elements.ts
-import { pgTable, uuid, text, integer, timestamp, unique, customType } from 'drizzle-orm/pg-core'
-import { pages } from './pages'
+```sql
+-- supabase/migrations/20250430100005_elements.sql (shape — fields the service uses)
+create table public.elements (
+  id           uuid primary key default gen_random_uuid(),
+  page_id      uuid not null references public.pages(id) on delete cascade,
+  path         ltree not null,
+  parent_id    uuid references public.elements(id) on delete cascade,
+  label        text not null,
+  dom_id       text,
+  css_selector text,
+  description  text,
+  notes        text,
+  embedding    text,                              -- nullable; surfaced as has_embedding only
+  sort_order   integer not null default 0,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  unique (page_id, path)
+);
 
-const ltree   = customType<{ data: string }>({ dataType: () => 'ltree' })
-const vector  = customType<{ data: number[]; driverData: string }>({
-  dataType: () => 'vector(1536)',
-  toDriver: (v) => `[${v.join(',')}]`,
-})
-const textArr = customType<{ data: string[] }>({ dataType: () => 'text[]' })
-
-export const elements = pgTable('elements', {
-  id:             uuid('id').primaryKey().defaultRandom(),
-  pageId:         uuid('page_id').notNull().references(() => pages.id, { onDelete: 'cascade' }),
-
-  path:           ltree('path').notNull(),
-  parentId:       uuid('parent_id').references((): any => elements.id, { onDelete: 'cascade' }),
-
-  label:          text('label').notNull(),
-  domId:          text('dom_id'),
-  cssSelector:    text('css_selector'),
-  xpath:          text('xpath'),
-
-  description:    text('description').notNull(),
-  registerIntent: textArr('register_intent').default([]),
-  notes:          text('notes'),
-
-  embedding:      vector('embedding'),     // null in MVP, populated in Phase 2
-
-  sortOrder:      integer('sort_order').notNull().default(0),
-
-  createdAt:      timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt:      timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-}, (t) => ({
-  uniqPagePath: unique('elements_page_path_uq').on(t.pageId, t.path),
-}))
+create index elements_path_idx on public.elements using gist(path);
 ```
 
-Constraint enforced in the element service, not the DB: at least one of `domId`, `cssSelector`, `xpath` must be non-null.
+Differences from the original spec worth flagging:
 
-Index for Phase 2 (added now, queried later):
+- **No `xpath` column.** Resolution order is `#dom_id` first, then `css_selector`. We can add xpath as a third fallback if a customer actually needs it.
+- **No `register_intent text[]` column.** The planner doesn't exist yet — when it does and we want intent boosts, this is the column to add.
+- **`embedding` is currently `text`, not `vector(1536)`.** pgvector isn't enabled. The API returns a derived boolean `has_embedding` on every element so the dashboard can show an indicator dot without exposing the value.
+- **Service-level constraint** (not a DB constraint): at least one of `dom_id` / `css_selector` must be non-null. Enforced by a Zod `.refine()` in `apps/api/src/routes/elements.ts`.
+
+---
+
+## Walkthrough storage — five tables, not two
+
+The original design folded everything into `walkthrough_sessions` + `walkthrough_steps`, where each step was a JSON blob. The shipped schema splits the data by lifetime: a session lives across many messages; each assistant message may attach text parts and/or one walkthrough; a walkthrough owns its ordered steps.
 
 ```sql
-create index elements_path_idx on elements using gist(path);
--- pgvector index deferred until we have ≥ 1000 rows
+-- supabase/migrations/20250523000001_walkthroughs.sql
+
+-- One row per visitor session (widget open → widget closed)
+create table public.walkthrough_sessions (
+  id             uuid primary key default gen_random_uuid(),
+  agent_id       uuid not null references public.agents (id) on delete cascade,
+  visitor_id     text,
+  visitor_meta   jsonb,
+  page_url       text,
+  created_at     timestamptz not null default now(),
+  last_active_at timestamptz not null default now()
+);
+
+create index walkthrough_sessions_agent_idx on public.walkthrough_sessions (agent_id);
+
+-- Messages inside a session (role + ordering only — content is in child tables)
+create table public.session_messages (
+  id          uuid primary key default gen_random_uuid(),
+  session_id  uuid not null references public.walkthrough_sessions (id) on delete cascade,
+  role        text not null check (role in ('user', 'assistant')),
+  created_at  timestamptz not null default now()
+);
+
+create index session_messages_session_idx on public.session_messages (session_id, created_at);
+
+-- Text parts on a message (user prompt, or assistant narration between walkthroughs)
+create table public.message_text_parts (
+  id          uuid primary key default gen_random_uuid(),
+  message_id  uuid not null references public.session_messages (id) on delete cascade,
+  part_index  int not null default 0,
+  text        text not null,
+  created_at  timestamptz not null default now()
+);
+
+-- Walkthrough part on an assistant message (at most one per message in MVP)
+create table public.walkthroughs (
+  id              uuid primary key default gen_random_uuid(),
+  message_id      uuid not null references public.session_messages (id) on delete cascade,
+  plan_goal       text not null,
+  plan_rationale  text,
+  stream_status   text not null default 'open'
+                    check (stream_status in ('open', 'closed', 'aborted', 'error')),
+  parent_context  jsonb,                       -- WalkthroughPosition | null (where this branched from)
+  created_at      timestamptz not null default now()
+);
+
+create index walkthroughs_message_idx on public.walkthroughs (message_id);
+
+-- Individual steps streamed into a walkthrough
+create table public.walkthrough_steps (
+  id             uuid primary key default gen_random_uuid(),
+  walkthrough_id uuid not null references public.walkthroughs (id) on delete cascade,
+  step_index     int not null,
+  actions        jsonb not null default '[]',  -- WalkthroughAction[]
+  popover        jsonb,                        -- { title?, body, elementId? } | null
+  cumulative_ms  int not null default 0,       -- timeline position derived at write time
+  created_at     timestamptz not null default now(),
+  unique (walkthrough_id, step_index)
+);
+
+create index walkthrough_steps_wt_idx on public.walkthrough_steps (walkthrough_id, step_index);
 ```
 
----
+### How this maps to the widget's in-memory shape
 
-## `walkthrough_sessions`
+The widget's `Conversation → Message → MessagePart` types in `packages/widget/src/types/conversation.ts` are exactly what these tables encode:
 
-One row per visitor query. The session captures everything needed to replay the walkthrough later (Phase 2 viewer).
+| Widget type | DB table |
+|---|---|
+| `Conversation` | one `walkthrough_sessions` row |
+| `Message` | one `session_messages` row |
+| `TextPart` (in `message.parts[]`) | one `message_text_parts` row |
+| `WalkthroughPart` (in `message.parts[]`) | one `walkthroughs` row + its `walkthrough_steps[]` |
+| `WalkthroughStep` | one `walkthrough_steps` row |
+| `WalkthroughPart.parentContext` | `walkthroughs.parent_context` JSONB |
 
-```ts
-// packages/db/src/schema/walkthroughSessions.ts
-import { pgTable, uuid, text, jsonb, timestamp } from 'drizzle-orm/pg-core'
-import { agents } from './agents'
-import { pages } from './pages'
+The split lets `pause-and-branch` mid-walkthrough be modeled cleanly: the branch is just a *new walkthrough* on a *later assistant message* with `parent_context` pointing to the position in the prior walkthrough where the user paused.
 
-export const walkthroughSessions = pgTable('walkthrough_sessions', {
-  id:           uuid('id').primaryKey().defaultRandom(),
-  agentId:      uuid('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
+### What's not implemented yet
 
-  visitorId:    text('visitor_id'),                   // opaque, optional
-  visitorMeta:  jsonb('visitor_meta'),
-
-  // The query that started it all
-  query:        text('query').notNull(),
-  pageUrl:      text('page_url').notNull(),
-
-  // Planner output
-  pickedPageId: uuid('picked_page_id').references(() => pages.id),
-  planOutline:  jsonb('plan_outline'),               // short titles, pre-streaming
-
-  // Outcomes
-  status:       text('status').notNull().default('streaming'),
-                                                     // 'streaming'|'complete'|'aborted'|'error'
-  errorMessage: text('error_message'),
-
-  createdAt:    timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  completedAt:  timestamp('completed_at', { withTimezone: true }),
-})
-```
-
----
-
-## `walkthrough_steps`
-
-One row per `Step` emitted by the streamer. Inserts happen as the SSE stream fires, so a crashed stream leaves a partial trail we can debug.
-
-```ts
-// packages/db/src/schema/walkthroughSteps.ts
-import { pgTable, uuid, integer, jsonb, timestamp } from 'drizzle-orm/pg-core'
-import { walkthroughSessions } from './walkthroughSessions'
-
-export const walkthroughSteps = pgTable('walkthrough_steps', {
-  id:         uuid('id').primaryKey().defaultRandom(),
-  sessionId:  uuid('session_id').notNull().references(() => walkthroughSessions.id, { onDelete: 'cascade' }),
-
-  // Position in the original stream (not the playback order — playback can branch)
-  streamIndex: integer('stream_index').notNull(),
-
-  step:       jsonb('step').notNull(),               // the full Step object as emitted
-  emittedAt:  timestamp('emitted_at', { withTimezone: true }).notNull().defaultNow(),
-})
-```
-
-`step` is the raw payload (see `engine/01-action-schema.md`). Storing JSON instead of normalizing means we can change the action schema in Phase 2 without rewriting historical rows.
+- **No streamer writing to these tables.** Today only `walkthrough_sessions` is written, via `POST /v1/sessions` (the widget creates a session when it opens; the API touches `last_active_at`). The four downstream tables are reserved for the upcoming planner + streamer service.
+- **No `status` column on `walkthrough_sessions`.** Aborted vs completed sessions are tracked on `walkthroughs.stream_status`, not on the session row.
 
 ---
 
 ## `profiles`
 
-Trimmed from the legacy doc. Mirrors `auth.users` via a trigger; no change for the new product.
+Mirrors `auth.users` via a trigger; same as the legacy doc.
 
-```ts
-// packages/db/src/schema/profiles.ts
-import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core'
-
-export const profiles = pgTable('profiles', {
-  id:         uuid('id').primaryKey(),               // = auth.users.id
-  email:      text('email').notNull(),
-  fullName:   text('full_name'),
-  avatarUrl:  text('avatar_url'),
-  plan:       text('plan').notNull().default('free'),
-  createdAt:  timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt:  timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+```sql
+create table public.profiles (
+  id         uuid primary key,                   -- = auth.users.id
+  email      text not null,
+  full_name  text,
+  avatar_url text,
+  plan       text not null default 'free',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 ```
 
-The `auth.users → public.profiles` trigger is unchanged from the legacy doc and lives as a hand-written SQL migration since Drizzle doesn't manage triggers.
+The `auth.users → public.profiles` trigger is in `supabase/migrations/20250430100007_functions.sql`.
 
 ---
 
-## Drizzle client
+## `packages/db` client
 
 ```ts
 // packages/db/src/client.ts
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
-import * as schema from './schema'
+import { createClient } from "@supabase/supabase-js"
+import type { Database } from "./types.js"
 
-export function createDbClient(connectionString: string) {
-  const client = postgres(connectionString, { prepare: false })   // pgbouncer-safe
-  return drizzle(client, { schema })
+export function createBrowserClient() {
+  return createClient<Database>(
+    process.env.VITE_EREGNA_SUPABASE_URL!,
+    process.env.VITE_EREGNA_SUPABASE_ANON_KEY!,
+  )
 }
 
-export type Db = ReturnType<typeof createDbClient>
-export * as schema from './schema'
+export function createServerClient() {
+  return createClient<Database>(
+    process.env.EREGNA_SUPABASE_URL!,
+    process.env.EREGNA_SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  )
+}
 ```
 
-`apps/api` instantiates one client at boot. The dashboard never imports this — see `data/02-auth-and-ownership.md`.
+`apps/api` calls `createServerClient()` on each request — Supabase's JS client is cheap to instantiate. The dashboard only imports this from the API path (never directly) so the browser bundle does not ship the service-role code path.
 
 ---
 
 ## Migrations
 
 ```bash
-# Generate from schema diffs
-pnpm --filter db drizzle-kit generate
+# Apply all new SQL files against linked project
+supabase db push
 
-# Apply against local Supabase Postgres
-pnpm --filter db drizzle-kit push
-
-# In CI / staging / prod
-pnpm --filter db drizzle-kit migrate
+# Roll back / inspect
+supabase db diff
 ```
 
-Hand-written SQL (triggers, GiST indexes, pgvector index) lives alongside generated migrations and is applied in the same `drizzle-kit migrate` run via the `journal.json` ordering.
+Drizzle Kit isn't wired in; if/when we adopt Drizzle, generated migrations would land in `packages/db/migrations/` and run *after* the hand-written ones in `supabase/migrations/`.
 
 ---
 
 ## What's gone vs. the legacy schema
 
-- `conversations` and `messages` are replaced by `walkthrough_sessions` + `walkthrough_steps`. A pure-chat session is just one with no `picked_page_id` and a single popover step.
-- `match_elements` RPC is unused in MVP. We keep the SQL for Phase 2 but the API doesn't call it.
-- RLS policies are dropped. See `data/02-auth-and-ownership.md` for why and what replaces them.
+- `conversations` and `messages` (chat-only tables) — still in earlier migrations, but no production code reads them.
+- `match_elements` RPC — still in `20250430100007_functions.sql`, unused; will be the basis of pgvector retrieval in Phase 2.
+- RLS policies were enabled then disabled (see `20250430110000_disable_rls.sql`). See `data/02-auth-and-ownership.md` for the trust model that replaces them.
