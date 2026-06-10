@@ -62,6 +62,16 @@ async function advanceChapterNode(state: GraphState): Promise<Partial<GraphState
   const part = state.patcher!.conversation.messages[state.assistantMsgIndex]
     ?.parts[state.walkthroughPartIndex];
   const totalSteps = part?.type === "walkthrough" ? part.steps.length : state.globalStepOffset;
+
+  // Close out the finished chapter ("failed" set by streamChapter survives).
+  if (part?.type === "walkthrough") {
+    const chapter = part.chapters[state.chapterIndex];
+    if (chapter && chapter.status !== "failed") {
+      chapter.status = "done";
+      await state.patcher!.emit();
+    }
+  }
+
   return {
     chapterIndex: state.chapterIndex + 1,
     stepIndexInChapter: 0,

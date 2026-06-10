@@ -29,9 +29,32 @@ export async function streamBodyNode(state: GraphState): Promise<Partial<GraphSt
       popoverTitle: step.popover.title,
     };
 
-    for await (const chunk of runNarrator(model, chapter, stepSpec, stepIndexInChapter)) {
-      h.appendPopoverChunk(conv, assistantMsgIndex, walkthroughPartIndex, globalStepIdx, chunk);
-      await patcher!.emit();
+    let streamed = false;
+    const narrate = async () => {
+      for await (const chunk of runNarrator(model, chapter, stepSpec, stepIndexInChapter)) {
+        streamed = true;
+        h.appendPopoverChunk(conv, assistantMsgIndex, walkthroughPartIndex, globalStepIdx, chunk);
+        await patcher!.emit();
+      }
+    };
+
+    try {
+      await narrate();
+    } catch (err) {
+      if (streamed) {
+        // Mid-stream break: the partial body is still useful — keep the step.
+        console.warn(`[agent] narrator broke mid-step ${globalStepIdx}; keeping partial body`, err);
+      } else {
+        try {
+          await narrate();
+        } catch (retryErr) {
+          // Step-level degradation: skip this step's narration, keep the run.
+          console.error(`[agent] narrator failed for step ${globalStepIdx}; skipping`, retryErr);
+          h.setStepStatus(conv, assistantMsgIndex, walkthroughPartIndex, globalStepIdx, "skipped", "narration-failed");
+          await patcher!.emit();
+          return { stepIndexInChapter: stepIndexInChapter + 1 };
+        }
+      }
     }
   }
 

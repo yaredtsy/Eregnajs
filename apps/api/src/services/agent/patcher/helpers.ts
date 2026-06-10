@@ -1,4 +1,4 @@
-import type { Conversation, WalkthroughChapter, WalkthroughStep, WalkthroughAction, StepStatus, WalkthroughStatus, MessageStatus } from "@repo/walkthrough-core";
+import type { Conversation, WalkthroughChapter, WalkthroughStep, WalkthroughAction, StepStatus, WalkthroughStatus, MessageStatus, ChapterStatus } from "@repo/walkthrough-core";
 
 // Granular mutation helpers — one function per atomic change on the Conversation mirror.
 // The fast-json-patch observer on `createPatcher` sees each mutation and emits an op.
@@ -123,6 +123,20 @@ export function setStepStatus(
       step.status = status;
       if (skipReason !== undefined) step.skipReason = skipReason;
     }
+  }
+}
+
+export function setChapterStatus(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  chapterIndex: number,
+  status: ChapterStatus,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    const chapter = part.chapters[chapterIndex];
+    if (chapter) chapter.status = status;
   }
 }
 

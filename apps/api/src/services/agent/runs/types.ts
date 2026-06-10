@@ -6,6 +6,7 @@ export type RunStatus = "streaming" | "complete" | "aborted" | "error";
 export interface AgentRunRow {
   id: string;
   agent_id: string;
+  owner_id: string | null;
   conversation_id: string | null;
   visitor_id: string | null;
   page_url: string | null;
@@ -28,7 +29,9 @@ export interface AgentRunListItem {
 }
 
 export interface SaveOpts {
+  id: string;
   agentId: string;
+  ownerId: string;
   conversationId?: string;
   visitorId?: string;
   pageUrl?: string;

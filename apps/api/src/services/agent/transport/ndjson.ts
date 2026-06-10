@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import type { PatchFrame } from "@repo/walkthrough-core";
+import type { RunFrame } from "@repo/walkthrough-core";
 
 export function createNdjsonStream(c: Context) {
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
@@ -16,8 +16,9 @@ export function createNdjsonStream(c: Context) {
       },
     }),
 
-    async writeFrame(frame: PatchFrame): Promise<void> {
+    async writeFrame(frame: RunFrame): Promise<void> {
       const line = JSON.stringify(frame) + "\n";
+      // Awaiting the writer is the backpressure: a slow client slows the run.
       await writer.write(encoder.encode(line));
     },
 

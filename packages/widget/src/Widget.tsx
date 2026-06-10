@@ -54,7 +54,18 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
           hostState,
           hostTools,
           signal: controllerRef.current.signal,
-          onFrame: (frame) => ctxRef.current.dispatch({ type: "APPLY_PATCH", frame }),
+          onFrame: (frame) => {
+            const d2 = ctxRef.current.dispatch;
+            if (frame.kind === "hello") {
+              // Replace the local document with the server's seeded one so
+              // patches apply onto exactly what the server is mutating.
+              d2({ type: "SET_CONVERSATION", conversation: frame.conversation });
+            } else if (frame.kind === "patch") {
+              d2({ type: "APPLY_PATCH", frame });
+            } else if (frame.kind === "end" && frame.status === "error") {
+              console.error("[eregna] run failed:", frame.message);
+            }
+          },
         });
       } catch (err) {
         if ((err as DOMException).name !== "AbortError") {

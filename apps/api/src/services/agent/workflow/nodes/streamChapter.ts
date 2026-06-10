@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import type { GraphState } from "../graph.js";
 import { runStepper } from "../../subagents/stepper/run.js";
 import { pickModel } from "../../llm/provider.js";
+import { withRetry } from "../../llm/withRetry.js";
 import * as h from "../../patcher/helpers.js";
 
 // Runs the Stepper for the current chapter and adds its steps to the conversation.
@@ -12,10 +13,28 @@ export async function streamChapterNode(state: GraphState): Promise<Partial<Grap
   const chapter = plan!.chapters[chapterIndex]!;
 
   const model = pickModel(ctx.agent.model);
-  const stepList = await runStepper(model, ctx, chapter);
+
+  let stepList;
+  try {
+    stepList = await withRetry(() => runStepper(model, ctx, chapter), {
+      label: `stepper(chapter ${chapterIndex})`,
+    });
+  } catch (err) {
+    // Chapter-level degradation: this chapter is lost, the run is not.
+    // With zero steps added, routeAfterBody falls straight through to the
+    // next chapter.
+    console.error(`[agent] stepper failed for chapter ${chapterIndex}; degrading`, err);
+    h.setChapterStatus(conv, assistantMsgIndex, walkthroughPartIndex, chapterIndex, "failed");
+    if (chapterIndex === 0) {
+      h.setWalkthroughStatus(conv, assistantMsgIndex, walkthroughPartIndex, "playing");
+    }
+    await patcher.emit();
+    return { stepIndexInChapter: 0 };
+  }
 
   // Mark chapter as starting at this global step offset
   h.setChapterStepIndex(conv, assistantMsgIndex, walkthroughPartIndex, chapterIndex, globalStepOffset);
+  h.setChapterStatus(conv, assistantMsgIndex, walkthroughPartIndex, chapterIndex, "active");
 
   // Add each step (popover body starts empty; Narrator fills it)
   for (const spec of stepList.steps) {

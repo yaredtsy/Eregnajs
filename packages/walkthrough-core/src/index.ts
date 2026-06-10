@@ -10,6 +10,7 @@ export type {
 export type {
   WalkthroughStatus,
   StepStatus,
+  ChapterStatus,
   PopoverConfig,
   WalkthroughChapter,
   WalkthroughStep,
@@ -19,8 +20,17 @@ export type {
 
 export type { WalkthroughAction } from "./walkthrough/actions.js";
 
-export type { JsonPatchOp, StringAppendOp, WireOp, PatchFrame } from "./patch/types.js";
-export { isStringAppend } from "./patch/types.js";
+export type {
+  JsonPatchOp,
+  StringAppendOp,
+  WireOp,
+  PatchFrame,
+  HelloFrame,
+  PatchRunFrame,
+  EndFrame,
+  RunFrame,
+} from "./patch/types.js";
+export { isStringAppend, WIRE_PROTOCOL } from "./patch/types.js";
 
 export { applyOps, applyPatchFrame } from "./conversation/applyPatch.js";
 

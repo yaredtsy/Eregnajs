@@ -17,6 +17,10 @@ export type {
   StringAppendOp,
   WireOp,
   PatchFrame,
+  HelloFrame,
+  PatchRunFrame,
+  EndFrame,
+  RunFrame,
 } from "@repo/walkthrough-core";
 
 export {

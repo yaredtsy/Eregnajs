@@ -59,7 +59,7 @@ agentRouter.post(
 
 agentRouter.get("/runs/:id", async (c) => {
   const id = c.req.param("id");
-  const row = runs.load(id);
+  const row = runs.load(id, c.get("userId"));
   if (!row) return c.json({ error: "not found" }, 404);
   return c.json({ data: row });
 });
@@ -69,5 +69,5 @@ agentRouter.get("/runs", async (c) => {
   if (!agentId) return c.json({ error: "agentId required" }, 400);
   const limit = Number(c.req.query("limit") ?? 50);
   const offset = Number(c.req.query("offset") ?? 0);
-  return c.json({ data: runs.listByAgent(agentId, limit, offset) });
+  return c.json({ data: runs.listByAgent(agentId, c.get("userId"), limit, offset) });
 });

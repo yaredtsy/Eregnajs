@@ -1,10 +1,12 @@
 import { nanoid } from "nanoid";
 import { composeContext } from "./context/compose.js";
 import { createPatcher } from "./patcher/createPatcher.js";
+import * as h from "./patcher/helpers.js";
 import { buildGraph } from "./workflow/graph.js";
 import * as runs from "./runs/index.js";
-import type { PatchFrame } from "@repo/walkthrough-core";
-import type { Conversation } from "@repo/walkthrough-core";
+import { WIRE_PROTOCOL } from "@repo/walkthrough-core";
+import type { Conversation, RunFrame } from "@repo/walkthrough-core";
+import type { AgentContext } from "./context/types.js";
 
 export interface RunOpts {
   agentPublicId: string;
@@ -14,31 +16,40 @@ export interface RunOpts {
   hostTools?: Array<{ name: string; description: string; parameters?: Record<string, unknown> }>;
   visitorId?: string;
   signal?: AbortSignal;
-  onFrame: (frame: PatchFrame) => Promise<void>;
+  onFrame: (frame: RunFrame) => Promise<void>;
 }
 
 export async function runAgent(opts: RunOpts): Promise<void> {
   const startedAt = Date.now();
+  const runId = nanoid(10);
 
   const initialConv: Conversation = {
-    sessionId: nanoid(10),
+    sessionId: runId,
     agentName: "Eregna Agent",
     messages: [],
   };
 
-  const patcher = createPatcher(initialConv, opts.onFrame);
+  const patcher = createPatcher(initialConv, (frame) =>
+    opts.onFrame({ kind: "patch", ...frame }),
+  );
 
-  // Load context before the graph starts (keeps enrich node simple).
-  const ctx = await composeContext({
-    agentPublicId: opts.agentPublicId,
-    pageUrl: opts.pageUrl,
-    hostState: opts.hostState ?? {},
-    hostTools: opts.hostTools ?? [],
+  await opts.onFrame({
+    kind: "hello",
+    runId,
+    protocol: WIRE_PROTOCOL,
+    conversation: initialConv,
   });
 
-  const graph = buildGraph();
-
+  let ctx: AgentContext | null = null;
   try {
+    ctx = await composeContext({
+      agentPublicId: opts.agentPublicId,
+      pageUrl: opts.pageUrl,
+      hostState: opts.hostState ?? {},
+      hostTools: opts.hostTools ?? [],
+    });
+
+    const graph = buildGraph();
     await graph.invoke(
       {
         query: opts.query,
@@ -55,7 +66,9 @@ export async function runAgent(opts: RunOpts): Promise<void> {
     );
 
     runs.save({
+      id: runId,
       agentId: ctx.agent.id,
+      ownerId: ctx.agent.owner_id,
       query: opts.query,
       status: "complete",
       conversation: patcher.conversation,
@@ -64,19 +77,60 @@ export async function runAgent(opts: RunOpts): Promise<void> {
       pageUrl: opts.pageUrl,
       startedAt,
     });
+
+    await opts.onFrame({ kind: "end", seq: patcher.getLog().length, status: "complete" });
   } catch (err) {
-    const status = (opts.signal?.aborted) ? "aborted" : "error";
-    runs.save({
-      agentId: ctx.agent.id,
-      query: opts.query,
-      status,
-      conversation: patcher.conversation,
-      patchLog: patcher.getLog(),
-      visitorId: opts.visitorId,
-      pageUrl: opts.pageUrl,
-      errorMessage: String(err),
-      startedAt,
-    });
+    const aborted = opts.signal?.aborted ?? false;
+    const message = err instanceof Error ? err.message : String(err);
+
+    // Surface the failure in the document, then always terminate the stream.
+    // Both are best-effort: the connection may already be gone.
+    if (!aborted) {
+      try {
+        markRunError(patcher.conversation, message);
+        await patcher.emit();
+      } catch {}
+      try {
+        await opts.onFrame({
+          kind: "end",
+          seq: patcher.getLog().length,
+          status: "error",
+          message,
+        });
+      } catch {}
+    }
+
+    if (ctx) {
+      runs.save({
+        id: runId,
+        agentId: ctx.agent.id,
+        ownerId: ctx.agent.owner_id,
+        query: opts.query,
+        status: aborted ? "aborted" : "error",
+        conversation: patcher.conversation,
+        patchLog: patcher.getLog(),
+        visitorId: opts.visitorId,
+        pageUrl: opts.pageUrl,
+        errorMessage: message,
+        startedAt,
+      });
+    }
     throw err;
   }
+}
+
+function markRunError(conv: Conversation, message: string): void {
+  let msgIndex = -1;
+  for (let i = conv.messages.length - 1; i >= 0; i--) {
+    if (conv.messages[i]!.role === "assistant") { msgIndex = i; break; }
+  }
+  if (msgIndex === -1) return;
+  const partIndex = conv.messages[msgIndex]!.parts.findIndex(
+    (p) => p.type === "walkthrough",
+  );
+  if (partIndex === -1) {
+    h.setMessageStatus(conv, msgIndex, "error");
+    return;
+  }
+  h.failWalkthrough(conv, msgIndex, partIndex, message);
 }

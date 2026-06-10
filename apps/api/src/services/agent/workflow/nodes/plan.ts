@@ -1,6 +1,7 @@
 import type { GraphState } from "../graph.js";
 import { runPlanner } from "../../subagents/planner/run.js";
 import { pickModel } from "../../llm/provider.js";
+import { withRetry } from "../../llm/withRetry.js";
 import * as h from "../../patcher/helpers.js";
 
 export async function planNode(state: GraphState): Promise<Partial<GraphState>> {
@@ -8,7 +9,9 @@ export async function planNode(state: GraphState): Promise<Partial<GraphState>> 
   const conv = patcher.conversation;
 
   const model = pickModel(ctx.agent.model);
-  const plan = await runPlanner(model, ctx, query);
+  // Planner failure after retries is fatal for the run: there is nothing to
+  // degrade to. run.ts turns the throw into an error patch + end frame.
+  const plan = await withRetry(() => runPlanner(model, ctx, query), { label: "planner" });
 
   // Update walkthrough goal now that we have it
   const part = conv.messages[assistantMsgIndex]?.parts[walkthroughPartIndex];
@@ -24,6 +27,7 @@ export async function planNode(state: GraphState): Promise<Partial<GraphState>> 
       description: chapter.description,
       elementId: chapter.elementId,
       stepIndex: -1,
+      status: "pending",
     });
   }
 
