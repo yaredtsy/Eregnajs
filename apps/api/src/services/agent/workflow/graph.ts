@@ -12,15 +12,14 @@ import { completeNode } from "./nodes/complete.js";
 // State definition — Annotation API (LangGraph 0.2+)
 // ---------------------------------------------------------------------------
 
-// ctx and patcher are always provided in the invoke() call — the defaults
-// are unreachable at runtime. The Annotation types are non-null so nodes
-// don't need null guards.
-const unreachable = (): never => { throw new Error("must be provided in invoke()"); };
+// LangGraph calls default() when the channel is created (module load), so these
+// must not throw. Real values are always passed in graph.invoke() in run.ts.
+const graphPlaceholder = <T>(): T => null as unknown as T;
 
 export const GraphAnnotation = Annotation.Root({
   query:                Annotation<string>({ reducer: (_, n) => n, default: () => "" }),
-  ctx:                  Annotation<AgentContext>({ reducer: (_, n) => n, default: unreachable }),
-  patcher:              Annotation<Patcher>({ reducer: (_, n) => n, default: unreachable }),
+  ctx:                  Annotation<AgentContext>({ reducer: (_, n) => n, default: graphPlaceholder }),
+  patcher:              Annotation<Patcher>({ reducer: (_, n) => n, default: graphPlaceholder }),
   assistantMsgIndex:    Annotation<number>({ reducer: (_, n) => n, default: () => -1 }),
   walkthroughPartIndex: Annotation<number>({ reducer: (_, n) => n, default: () => -1 }),
   plan:                 Annotation<Plan | null>({ reducer: (_, n) => n, default: () => null }),
@@ -75,16 +74,18 @@ async function advanceChapterNode(state: GraphState): Promise<Partial<GraphState
 // ---------------------------------------------------------------------------
 
 export function buildGraph() {
+  // Node is named "makePlan" because "plan" is already a state channel name,
+  // and LangGraph forbids a node sharing a channel's name.
   const graph = new StateGraph(GraphAnnotation)
     .addNode("enrich",         enrichNode)
-    .addNode("plan",           planNode)
+    .addNode("makePlan",       planNode)
     .addNode("streamChapter",  streamChapterNode)
     .addNode("streamBody",     streamBodyNode)
     .addNode("advanceChapter", advanceChapterNode)
     .addNode("complete",       completeNode)
     .addEdge(START,           "enrich")
-    .addEdge("enrich",        "plan")
-    .addEdge("plan",          "streamChapter")
+    .addEdge("enrich",        "makePlan")
+    .addEdge("makePlan",      "streamChapter")
     .addEdge("streamChapter", "streamBody")
     .addConditionalEdges("streamBody", routeAfterBody, {
       streamBody:    "streamBody",
