@@ -1,5 +1,7 @@
 # 06 — Patcher and Wire
 
+> **As-built note (2026-06):** the wire now has an envelope — first line `{kind:"hello", runId, protocol, conversation}`, then `{kind:"patch", seq, ops}`, always a terminal `{kind:"end", status, message?}` (docs/v2 `2-system/02-contracts.md` §5). Streamability is decided by terminal field name (`text`/`body`/`detail`), not full-path regexes — the original regexes missed step popovers entirely. See `patcher/streamablePaths.ts` + `patcher.test.ts`.
+
 > How mutations on the in-memory `Conversation` mirror become NDJSON-of-JSON-Patch frames on the wire. `fast-json-patch` does the heavy lifting via its `observe()` API — the orchestrator and patch helpers mutate plain objects; ops are emitted automatically; one writer pipes them as NDJSON.
 
 Folders: `apps/api/src/services/agent/patcher/`, `apps/api/src/services/agent/transport/`, and the widget's `packages/walkthrough-core/src/conversation/applyPatch.ts`.

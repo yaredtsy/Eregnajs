@@ -1,5 +1,7 @@
 # 04 — Workflow (LangGraph Orchestrator)
 
+> **As-built note (2026-06):** the code uses LangGraph's `Annotation.Root` API, not the `channels` object below; channel `default()` runs at module load so defaults are non-throwing placeholders; the plan node is named `makePlan` (a node may not share a state channel's name); and an `advanceChapter` node sits between the step loop and `routeChapter`. Subagent calls are wrapped in `withRetry` with chapter-level degradation (`docs/v2/3-server/02-orchestration.md` §4).
+
 > The orchestrator. A LangGraph `StateGraph` that decides *which sub-agent runs next* and applies each sub-agent's output to the `Conversation` via patch helpers. **The orchestrator itself does not call an LLM.** Every LLM interaction is delegated to one of the three sub-agents in `05-subagents.md`.
 
 Folder: `apps/api/src/services/agent/workflow/`

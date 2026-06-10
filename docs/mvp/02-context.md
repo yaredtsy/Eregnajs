@@ -1,5 +1,7 @@
 # 02 — Context Engineering
 
+> **As-built note (2026-06):** the code inlined all providers into one `context/compose.ts` function — the `ContextProvider` interface and `providers/` folder below were never built. `conversationHistory` is stubbed as an empty *string*, not `BaseMessage[]`, and elements are passed as flat rows (the tree is built at the prompt layer). The provider *concept* (one named loader per source) survives in docs/v2 `3-server/01-context-engineering.md`.
+
 > Everything the agent knows comes from **four sources**: DB rows for the agent/page/elements, host-injected state, host-injected tools, and prior conversation messages. Nothing else. This doc defines the `ContextProvider` interface, the providers themselves, and how chapter-scoped contexts are derived from them for the per-chapter prompt.
 
 Folder: `apps/api/src/services/agent/context/`
