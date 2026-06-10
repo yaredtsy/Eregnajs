@@ -17,6 +17,9 @@ import { computeStepDuration, applyPatchFrame } from "../types/conversation";
 
 export type WidgetMode = "closed" | "bubble" | "detached";
 export type PlayMode = "history" | "live";
+// "live": steps play as frames arrive. "on-demand": frames buffer; playback
+// starts (as history) once the run completes. (docs/v2/4-client/02 §5)
+export type PlaybackChoice = "live" | "on-demand";
 
 export interface WidgetState {
   mode: WidgetMode;
@@ -28,6 +31,8 @@ export interface WidgetState {
   stepOffsetMs: number;
   composerValue: string;
   playMode: PlayMode;
+  playbackChoice: PlaybackChoice;
+  planPanelOpen: boolean;
 }
 
 export type WidgetAction =
@@ -44,7 +49,9 @@ export type WidgetAction =
   | { type: "APPLY_PATCH"; frame: PatchFrame }
   | { type: "SET_PLAY_MODE"; playMode: PlayMode }
   | { type: "SET_STEP_STATUS"; walkthroughId: string; stepIndex: number; status: StepStatus }
-  | { type: "SET_CONVERSATION"; conversation: Conversation };
+  | { type: "SET_CONVERSATION"; conversation: Conversation }
+  | { type: "SET_PLAYBACK_CHOICE"; choice: PlaybackChoice }
+  | { type: "TOGGLE_PLAN_PANEL" };
 
 // ---------------------------------------------------------------------------
 // Pure helpers (no side effects)
@@ -62,6 +69,29 @@ function findWalkthrough(
     }
   }
   return null;
+}
+
+function findWalkthroughByStatus(
+  conversation: Conversation,
+  status: WalkthroughPart["status"],
+): WalkthroughPart | null {
+  for (let m = conversation.messages.length - 1; m >= 0; m--) {
+    for (const part of conversation.messages[m]!.parts) {
+      if (part.type === "walkthrough" && part.status === status) return part;
+    }
+  }
+  return null;
+}
+
+// The walkthrough currently being streamed into the document, if any —
+// the player shows the ticker for it before it is activated for playback.
+export function findStreamingWalkthrough(
+  conversation: Conversation,
+): WalkthroughPart | null {
+  return (
+    findWalkthroughByStatus(conversation, "planning") ??
+    findWalkthroughByStatus(conversation, "playing")
+  );
 }
 
 export function totalDurationMs(wt: WalkthroughPart): number {
@@ -187,19 +217,36 @@ function reducer(state: WidgetState, action: WidgetAction): WidgetState {
 
     case "APPLY_PATCH": {
       const newConv = applyPatchFrame(state.conversation, action.frame);
-      // In live mode, auto-activate the first walkthrough that enters "playing" status.
-      let newActiveId = state.activeWalkthroughId;
-      if (state.playMode === "live" && !newActiveId) {
-        outer: for (const msg of newConv.messages) {
-          for (const part of msg.parts) {
-            if (part.type === "walkthrough" && part.status === "playing") {
-              newActiveId = part.walkthroughId;
-              break outer;
-            }
-          }
-        }
+      if (state.playMode !== "live" || state.activeWalkthroughId) {
+        return { ...state, conversation: newConv };
       }
-      return { ...state, conversation: newConv, activeWalkthroughId: newActiveId };
+
+      // Watching live: activate the first walkthrough that starts playing.
+      if (state.playbackChoice === "live") {
+        const wt = findWalkthroughByStatus(newConv, "playing");
+        if (wt) {
+          return { ...state, conversation: newConv, activeWalkthroughId: wt.walkthroughId };
+        }
+        return { ...state, conversation: newConv };
+      }
+
+      // Play on demand: buffer until the run completes, then hand the finished
+      // document to the history player, paused on a ready-to-play bar.
+      // Errored runs activate too — the partial walkthrough is still viewable.
+      const completed =
+        findWalkthroughByStatus(newConv, "complete") ??
+        findWalkthroughByStatus(newConv, "error");
+      if (completed) {
+        return {
+          ...state,
+          conversation: newConv,
+          activeWalkthroughId: completed.walkthroughId,
+          playMode: "history",
+          status: "paused",
+          stepOffsetMs: 0,
+        };
+      }
+      return { ...state, conversation: newConv };
     }
 
     case "SET_PLAY_MODE":
@@ -225,6 +272,12 @@ function reducer(state: WidgetState, action: WidgetAction): WidgetState {
 
     case "SET_CONVERSATION":
       return { ...state, conversation: action.conversation };
+
+    case "SET_PLAYBACK_CHOICE":
+      return { ...state, playbackChoice: action.choice };
+
+    case "TOGGLE_PLAN_PANEL":
+      return { ...state, planPanelOpen: !state.planPanelOpen };
 
     default:
       return state;
@@ -264,6 +317,8 @@ export function WidgetProvider({
     stepOffsetMs: 0,
     composerValue: "",
     playMode: "history",
+    playbackChoice: "live",
+    planPanelOpen: false,
   });
 
   const activeWt = getActiveWt(state);

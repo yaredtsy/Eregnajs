@@ -1,4 +1,6 @@
 import type { WalkthroughAction } from "./actions.js";
+import type { Thought } from "./thoughts.js";
+import type { ElementManifest } from "./manifest.js";
 
 export type WalkthroughStatus = "planning" | "playing" | "complete" | "error";
 export type StepStatus = "pending" | "running" | "done" | "skipped";
@@ -43,4 +45,8 @@ export type WalkthroughPart = {
   chapters: WalkthroughChapter[];
   steps: WalkthroughStep[];
   parentContext: WalkthroughPosition | null;
+  // Optional until the server emits them (docs/v2 Phase 4); the player
+  // renders them whenever present.
+  thoughts?: Thought[];
+  manifest?: ElementManifest;
 };

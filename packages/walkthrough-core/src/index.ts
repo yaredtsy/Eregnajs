@@ -19,6 +19,8 @@ export type {
 } from "./walkthrough/types.js";
 
 export type { WalkthroughAction } from "./walkthrough/actions.js";
+export type { Thought, ThoughtPhase } from "./walkthrough/thoughts.js";
+export type { SelectorQuery, ManifestEntry, ElementManifest } from "./walkthrough/manifest.js";
 
 export type {
   JsonPatchOp,

@@ -1,11 +1,16 @@
 import { useEffect, useRef } from "react";
 import { SAMPLE_CONVERSATION } from "./data/sample-conversation";
-import { WidgetProvider, useWidget, useWidgetDispatch } from "./store/widget-context";
+import {
+  WidgetProvider,
+  useWidget,
+  useWidgetDispatch,
+  findStreamingWalkthrough,
+} from "./store/widget-context";
 import { usePlayer } from "./hooks/usePlayer";
 import { useLiveEngine } from "./hooks/useLiveEngine";
 import { BubbleFAB } from "./components/BubbleFAB";
 import { ChatPopup } from "./components/ChatPopup";
-import { PlayerBar } from "./components/PlayerBar";
+import { DetachedPlayer } from "./components/DetachedPlayer";
 import { WalkthroughOverlay } from "./components/WalkthroughOverlay";
 import { mountReady } from "./embed/host-api.impl.js";
 import { getVisitorId } from "./embed/visitorId.js";
@@ -80,16 +85,27 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
   // Abort any in-flight stream on unmount. Single cleanup-only effect.
   useEffect(() => () => { controllerRef.current?.abort(); }, []);
 
+  // Auto-detach once per walkthrough: when one activates for playback, or a
+  // live run starts streaming (the ticker is the only planning feedback).
+  // The ref makes it once-per-id so a user-closed bar stays closed.
+  const streamingWt =
+    state.playMode === "live" ? findStreamingWalkthrough(state.conversation) : null;
+  const detachKey =
+    state.activeWalkthroughId ??
+    (streamingWt ? `pending:${streamingWt.walkthroughId}` : null);
+  const lastDetachKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!detachKey || lastDetachKeyRef.current === detachKey) return;
+    lastDetachKeyRef.current = detachKey;
+    dispatch({ type: "SET_MODE", mode: "detached" });
+  }, [detachKey]); // dispatch is stable by React contract — omitted
+
   return (
     <>
       <WalkthroughOverlay />
       <div className="eregna-widget-root">
         {state.mode === "bubble" && <ChatPopup />}
-        {state.mode === "detached" && (
-          <div className="eregna-detached-bar">
-            <PlayerBar />
-          </div>
-        )}
+        {state.mode === "detached" && <DetachedPlayer />}
         <BubbleFAB />
       </div>
     </>

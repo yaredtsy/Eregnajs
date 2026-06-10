@@ -26,42 +26,111 @@ export const SAMPLE_CONVERSATION: Conversation = {
           planRationale:
             "Walk through the dashboard to show agent creation end-to-end.",
           status: "complete",
+          thoughts: [
+            {
+              id: "th_01",
+              phase: "plan",
+              label: "Reading your question — you want to create an agent",
+              ts: 0,
+            },
+            {
+              id: "th_02",
+              phase: "plan",
+              label: "Found 6 relevant components on this page",
+              detail:
+                "The dashboard hero, the agents grid, the new-agent button and the three form fields cover the full creation flow.",
+              ts: 400,
+            },
+            {
+              id: "th_03",
+              phase: "chapter",
+              chapterIndex: 0,
+              label: "Starting with an orientation of the dashboard",
+              ts: 900,
+            },
+            {
+              id: "th_04",
+              phase: "chapter",
+              chapterIndex: 2,
+              label: "The create button opens the form below",
+              ts: 1600,
+            },
+            {
+              id: "th_05",
+              phase: "chapter",
+              chapterIndex: 5,
+              label: "Closing with the submit step",
+              ts: 2300,
+            },
+          ],
+          manifest: {
+            "agents-page-hero": {
+              label: "Dashboard hero",
+              selectors: [{ kind: "dom-id", value: "agents-page-hero" }],
+            },
+            "agents-grid": {
+              label: "Agents grid",
+              selectors: [{ kind: "dom-id", value: "agents-grid" }],
+            },
+            "new-agent-btn": {
+              label: "New agent button",
+              selectors: [{ kind: "dom-id", value: "new-agent-btn" }],
+            },
+            "agent-name-field": {
+              label: "Agent name field",
+              selectors: [{ kind: "dom-id", value: "agent-name-field" }],
+            },
+            "agent-url-field": {
+              label: "Agent URL field",
+              selectors: [{ kind: "dom-id", value: "agent-url-field" }],
+            },
+            "new-agent-form-section": {
+              label: "New agent form",
+              selectors: [{ kind: "dom-id", value: "new-agent-form-section" }],
+            },
+          },
           chapters: [
             {
               title: "Welcome to the dashboard",
               description: "Orient the user to the agents dashboard.",
               elementId: "agents-page-hero",
               stepIndex: 0,
+              status: "done",
             },
             {
               title: "Your agents list",
               description: "Show where existing agents appear.",
               elementId: "agents-grid",
               stepIndex: 1,
+              status: "done",
             },
             {
               title: "Open the new-agent form",
               description: "Guide user to the create button.",
               elementId: "new-agent-btn",
               stepIndex: 2,
+              status: "done",
             },
             {
               title: "Name your agent",
               description: "Fill in the agent name field.",
               elementId: "agent-name-field",
               stepIndex: 3,
+              status: "done",
             },
             {
               title: "Set the site URL",
               description: "Enter the target website URL.",
               elementId: "agent-url-field",
               stepIndex: 4,
+              status: "done",
             },
             {
               title: "Submit and you're done",
               description: "Submit the form to create the agent.",
               elementId: "new-agent-form-section",
               stepIndex: 5,
+              status: "done",
             },
           ],
           steps: [

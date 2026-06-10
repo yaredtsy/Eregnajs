@@ -65,6 +65,15 @@ export function ChatPopup() {
             onChange={(e) =>
               dispatch({ type: "SET_COMPOSER", value: e.target.value })
             }
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              const query = state.composerValue.trim();
+              if (!query) return;
+              dispatch({ type: "SET_COMPOSER", value: "" });
+              void (window as { eregna?: { ask(q: string): Promise<void> } }).eregna
+                ?.ask(query)
+                .catch((err: unknown) => console.error("[eregna] ask failed", err));
+            }}
             placeholder="Ask anything…"
             type="text"
             value={state.composerValue}
