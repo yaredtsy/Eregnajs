@@ -8,6 +8,7 @@ import { ChatPopup } from "./components/ChatPopup";
 import { PlayerBar } from "./components/PlayerBar";
 import { WalkthroughOverlay } from "./components/WalkthroughOverlay";
 import { mountReady } from "./embed/host-api.impl.js";
+import { getVisitorId } from "./embed/visitorId.js";
 import { runStream } from "./agent/runStream.js";
 
 interface WidgetInnerProps {
@@ -53,6 +54,7 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
           query,
           hostState,
           hostTools,
+          visitorId: getVisitorId(),
           signal: controllerRef.current.signal,
           onFrame: (frame) => {
             const d2 = ctxRef.current.dispatch;

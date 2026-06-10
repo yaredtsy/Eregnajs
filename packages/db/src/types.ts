@@ -51,6 +51,7 @@ export type Database = {
           model: string
           system_prompt: string | null
           is_active: boolean
+          allowed_origins: string[]
           created_at: string
           updated_at: string
         }
@@ -65,6 +66,7 @@ export type Database = {
           model?: string
           system_prompt?: string | null
           is_active?: boolean
+          allowed_origins?: string[]
           created_at?: string
           updated_at?: string
         }
@@ -79,6 +81,7 @@ export type Database = {
           model?: string
           system_prompt?: string | null
           is_active?: boolean
+          allowed_origins?: string[]
           created_at?: string
           updated_at?: string
         }

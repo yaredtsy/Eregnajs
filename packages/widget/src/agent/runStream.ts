@@ -47,7 +47,7 @@ export async function runStream(opts: RunStreamOptions): Promise<void> {
 
   try {
     resetWatchdog();
-    const res = await fetch(`${opts.apiBase}/v1/agent/run`, {
+    const res = await fetch(`${opts.apiBase}/public/agent/run`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

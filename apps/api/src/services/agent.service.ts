@@ -78,7 +78,7 @@ export const agentService = {
   async updateForUser(
     userId: string,
     id: string,
-    patch: Pick<TablesUpdate<'agents'>, 'name' | 'description' | 'model' | 'system_prompt' | 'is_active'>,
+    patch: Pick<TablesUpdate<'agents'>, 'name' | 'description' | 'model' | 'system_prompt' | 'is_active' | 'allowed_origins'>,
   ): Promise<AgentRow | null> {
     const db = createServerClient()
     const { data, error } = await db

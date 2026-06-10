@@ -13,6 +13,13 @@ function approxTokens(text: string) {
 	return Math.ceil(text.length / 4);
 }
 
+function parseOrigins(text: string): string[] {
+	return text
+		.split("\n")
+		.map((line) => line.trim())
+		.filter(Boolean);
+}
+
 function AgentSettingsPage() {
 	const { agentId } = Route.useParams();
 	const { data: agent, isLoading, error } = useAgent(agentId);
@@ -23,6 +30,7 @@ function AgentSettingsPage() {
 	const [model, setModel] = useState<AgentModel>("gpt-4o-mini");
 	const [systemPrompt, setSystemPrompt] = useState("");
 	const [isActive, setIsActive] = useState(true);
+	const [originsText, setOriginsText] = useState("");
 	const [saveError, setSaveError] = useState<string | null>(null);
 	const [savedAt, setSavedAt] = useState<string | null>(null);
 
@@ -33,6 +41,7 @@ function AgentSettingsPage() {
 		setModel((agent.model as AgentModel) ?? "gpt-4o-mini");
 		setSystemPrompt(agent.system_prompt ?? "");
 		setIsActive(agent.is_active);
+		setOriginsText((agent.allowed_origins ?? []).join("\n"));
 	}, [agent]);
 
 	const dirty = useMemo(() => {
@@ -42,13 +51,18 @@ function AgentSettingsPage() {
 			description !== (agent.description ?? "") ||
 			model !== (agent.model as AgentModel) ||
 			systemPrompt !== (agent.system_prompt ?? "") ||
-			isActive !== agent.is_active
+			isActive !== agent.is_active ||
+			parseOrigins(originsText).join("\n") !==
+				(agent.allowed_origins ?? []).join("\n")
 		);
-	}, [agent, name, description, model, systemPrompt, isActive]);
+	}, [agent, name, description, model, systemPrompt, isActive, originsText]);
 
 	async function save() {
 		setSaveError(null);
 		setSavedAt(null);
+		const nextOrigins = parseOrigins(originsText);
+		const originsChanged =
+			nextOrigins.join("\n") !== (agent?.allowed_origins ?? []).join("\n");
 		try {
 			await updateAgent.mutateAsync({
 				name: name.trim(),
@@ -56,6 +70,9 @@ function AgentSettingsPage() {
 				model,
 				system_prompt: systemPrompt.trim() || null,
 				is_active: isActive,
+				// Omitted unless edited so saves keep working against a database
+				// that predates the allowed_origins migration.
+				...(originsChanged ? { allowed_origins: nextOrigins } : {}),
 			});
 			setSavedAt(new Date().toLocaleTimeString());
 		} catch (e) {
@@ -195,6 +212,30 @@ function AgentSettingsPage() {
 							/>
 						</button>
 					</div>
+				</section>
+
+				<section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+					<label
+						htmlFor="s-origins"
+						className="block text-sm font-medium text-foreground"
+					>
+						Allowed origins
+					</label>
+					<p className="mt-0.5 mb-2 text-xs text-muted-foreground">
+						Sites that may embed this agent, one per line. Supports{" "}
+						<code className="text-[11px]">https://acme.com</code>,{" "}
+						<code className="text-[11px]">*.acme.com</code> and{" "}
+						<code className="text-[11px]">localhost:*</code>. Empty = open in
+						development, locked in production.
+					</p>
+					<textarea
+						id="s-origins"
+						value={originsText}
+						onChange={(e) => setOriginsText(e.target.value)}
+						rows={4}
+						placeholder={"https://acme.com\nlocalhost:*"}
+						className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 font-mono text-xs leading-relaxed text-foreground min-h-[88px]"
+					/>
 				</section>
 
 				<div className="space-y-2">

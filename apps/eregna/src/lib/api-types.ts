@@ -13,6 +13,7 @@ export type AgentListItem = {
 	model: string;
 	system_prompt: string | null;
 	is_active: boolean;
+	allowed_origins: string[];
 	created_at: string;
 	updated_at: string;
 	page_count: number;
@@ -32,6 +33,7 @@ export type UpdateAgentBody = {
 	model?: AgentModel;
 	system_prompt?: string | null;
 	is_active?: boolean;
+	allowed_origins?: string[];
 };
 
 export type PageItem = {

@@ -19,6 +19,7 @@ const patchBody = z
     model: z.enum(['gpt-4o-mini', 'gpt-4o', 'claude-3-5-haiku']).optional(),
     system_prompt: z.string().max(2000).optional().nullable(),
     is_active: z.boolean().optional(),
+    allowed_origins: z.array(z.string().trim().min(1).max(255)).max(20).optional(),
   })
   .refine((o) => Object.keys(o).length > 0, { message: 'At least one field required' })
 
