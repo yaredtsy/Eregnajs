@@ -18,6 +18,11 @@ export interface KnowledgeEntry {
   source: "dashboard" | "page";
 }
 
+export interface HistoryTurn {
+  role: "user" | "assistant";
+  text: string;
+}
+
 export interface AgentContext {
   agent:     AgentRow;
   page:      PageRow | null;
@@ -26,7 +31,7 @@ export interface AgentContext {
   hostState: Record<string, unknown>;
   hostTools: ToolDescriptor[];
   hostKnowledge: KnowledgeEntry[];
-  conversationHistory: string;  // pre-serialised prior messages for the prompt
+  conversationHistory: HistoryTurn[];
 }
 
 // A focused view of context for a single chapter, built by focusChapter().

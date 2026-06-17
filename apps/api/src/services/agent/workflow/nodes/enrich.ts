@@ -22,6 +22,12 @@ export async function enrichNode(state: GraphState): Promise<Partial<GraphState>
   const wtId = nanoid(10);
   const manifest = buildManifest(ctx.elements);
   const wtPartIdx = h.addWalkthroughPart(conv, assistantMsgIndex, wtId, "", undefined, manifest);
+  h.addThought(conv, assistantMsgIndex, wtPartIdx, {
+    id: nanoid(8),
+    phase: "system",
+    label: "Reading your question…",
+    ts: Date.now(),
+  });
   await patcher.emit();
 
   return { assistantMsgIndex, walkthroughPartIndex: wtPartIdx };

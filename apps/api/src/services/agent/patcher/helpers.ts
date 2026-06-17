@@ -1,4 +1,4 @@
-import type { Conversation, WalkthroughChapter, WalkthroughStep, WalkthroughAction, StepStatus, WalkthroughStatus, MessageStatus, ChapterStatus, ElementManifest } from "@repo/walkthrough-core";
+import type { Conversation, WalkthroughChapter, WalkthroughStep, WalkthroughAction, StepStatus, WalkthroughStatus, MessageStatus, ChapterStatus, ElementManifest, Thought } from "@repo/walkthrough-core";
 
 // Granular mutation helpers — one function per atomic change on the Conversation mirror.
 // The fast-json-patch observer on `createPatcher` sees each mutation and emits an op.
@@ -73,6 +73,33 @@ export function addWalkthroughPart(
     manifest,
   });
   return msg.parts.length - 1;
+}
+
+export function addThought(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  thought: Thought,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    if (!part.thoughts) part.thoughts = [];
+    part.thoughts.push(thought);
+  }
+}
+
+export function appendThoughtDetail(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  thoughtIndex: number,
+  chunk: string,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    const thought = part.thoughts?.[thoughtIndex];
+    if (thought) thought.detail = (thought.detail ?? "") + chunk;
+  }
 }
 
 export function addChapter(

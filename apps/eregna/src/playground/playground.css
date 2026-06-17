@@ -1,0 +1,7 @@
+.eregna-playground-stage {
+  max-width: 42rem;
+}
+
+.eregna-playground-stage button:disabled {
+  pointer-events: none;
+}

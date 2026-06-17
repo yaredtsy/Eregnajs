@@ -16,25 +16,43 @@ interface StandardSchemaResult {
   value?: unknown;
 }
 
-// Either a Standard Schema or a plain predicate returning true | error-message.
-// Functions cover state-dependent rules a schema can't express.
 export type ToolValidator =
   | StandardSchemaV1
   | ((args: Record<string, unknown>) => true | string);
 
-export interface ToolSpec {
+export interface ToolSpecBase {
   name: string;
   description: string;
   parameters?: Record<string, unknown>;
-  // Client-side last line of defense, run before run() (docs/v2/3-server/04 §4.1).
   validate?: ToolValidator;
+}
+
+export interface FnToolSpec extends ToolSpecBase {
+  kind?: "fn";
   run: (args: Record<string, unknown>) => unknown | Promise<unknown>;
 }
 
+export interface ApiEndpointSpec {
+  method: "GET" | "POST";
+  url: string;
+  headers?: Record<string, string>;
+  bodyTemplate?: Record<string, unknown>;
+}
+
+export interface ApiToolSpec extends ToolSpecBase {
+  kind: "api";
+  endpoint: ApiEndpointSpec;
+}
+
+export type ToolSpec = FnToolSpec | ApiToolSpec;
+
 const registry = new Map<string, ToolSpec>();
 
-export function registerTool(spec: ToolSpec): void {
+export function registerTool(spec: ToolSpec): () => void {
   registry.set(spec.name, spec);
+  return () => {
+    registry.delete(spec.name);
+  };
 }
 
 export function getTool(name: string): ToolSpec | undefined {
@@ -45,7 +63,6 @@ export function listTools(): ToolSpec[] {
   return Array.from(registry.values());
 }
 
-// Returns null when args pass, otherwise a human-readable message.
 export async function validateToolArgs(
   spec: ToolSpec,
   args: Record<string, unknown>,
@@ -72,7 +89,6 @@ export function getToolDescriptors(): Array<{
   description: string;
   parameters?: Record<string, unknown>;
 }> {
-  // validate and run stay on the page — only the descriptor crosses the wire.
   return listTools().map(({ name, description, parameters }) => ({
     name,
     description,

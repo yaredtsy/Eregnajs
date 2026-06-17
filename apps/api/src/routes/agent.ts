@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createNdjsonStream } from "../services/agent/transport/ndjson.js";
 import { runAgent } from "../services/agent/run.js";
 import * as runs from "../services/agent/runs/index.js";
+import { debugRouter } from "./debug.js";
 
 const RunBodySchema = z.object({
   agentPublicId: z.string(),
@@ -23,6 +24,8 @@ const RunBodySchema = z.object({
 });
 
 export const agentRouter = new Hono();
+
+agentRouter.route("/debug", debugRouter);
 
 agentRouter.post(
   "/run",

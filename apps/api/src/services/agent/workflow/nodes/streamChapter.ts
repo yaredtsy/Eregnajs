@@ -20,11 +20,15 @@ export async function streamChapterNode(state: GraphState): Promise<Partial<Grap
       label: `stepper(chapter ${chapterIndex})`,
     });
   } catch (err) {
-    // Chapter-level degradation: this chapter is lost, the run is not.
-    // With zero steps added, routeAfterBody falls straight through to the
-    // next chapter.
     console.error(`[agent] stepper failed for chapter ${chapterIndex}; degrading`, err);
     h.setChapterStatus(conv, assistantMsgIndex, walkthroughPartIndex, chapterIndex, "failed");
+    h.addThought(conv, assistantMsgIndex, walkthroughPartIndex, {
+      id: nanoid(8),
+      phase: "system",
+      label: `Skipped chapter: ${chapter.title}`,
+      chapterIndex,
+      ts: Date.now(),
+    });
     if (chapterIndex === 0) {
       h.setWalkthroughStatus(conv, assistantMsgIndex, walkthroughPartIndex, "playing");
     }
@@ -32,11 +36,17 @@ export async function streamChapterNode(state: GraphState): Promise<Partial<Grap
     return { stepIndexInChapter: 0 };
   }
 
-  // Mark chapter as starting at this global step offset
   h.setChapterStepIndex(conv, assistantMsgIndex, walkthroughPartIndex, chapterIndex, globalStepOffset);
   h.setChapterStatus(conv, assistantMsgIndex, walkthroughPartIndex, chapterIndex, "active");
 
-  // Add each step (popover body starts empty; Narrator fills it)
+  h.addThought(conv, assistantMsgIndex, walkthroughPartIndex, {
+    id: nanoid(8),
+    phase: "chapter",
+    label: stepList.thought,
+    chapterIndex,
+    ts: Date.now(),
+  });
+
   for (const spec of stepList.steps) {
     h.addStep(conv, assistantMsgIndex, walkthroughPartIndex, {
       id: nanoid(10),

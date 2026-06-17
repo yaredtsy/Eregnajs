@@ -6,6 +6,7 @@ export function buildStepperPrompt(
   ctx: AgentContext,
   chapter: PlanChapter,
   chapterCtx: ChapterContext,
+  repairHint?: string,
 ): string {
   const target = chapterCtx.targetElement;
   const siblings = chapterCtx.siblingElements.map((e) => `  - ${elementKey(e)} (${e.label})`).join("\n");
@@ -34,5 +35,7 @@ Produce an ordered list of steps. Each step should:
 3. Reference a popoverElementId (the component key the popover anchors to).
 4. Optionally have a popoverTitle.
 
-Assume all tool calls succeed. Keep steps focused — one interaction per step.`;
+Assume all tool calls succeed. Keep steps focused — one interaction per step.
+
+Return JSON with: thought (one short ticker line for this chapter), and steps (actions, optional popoverTitle, optional popoverElementId).${repairHint ? `\n\nPrevious attempt failed:\n${repairHint}\nPlease fix and try again.` : ""}`;
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Code2, History, LayoutList, PanelsTopLeft, Settings2 } from "@repo/ui/lucide-react";
+import { Code2, FlaskConical, History, LayoutList, PanelsTopLeft, Settings2 } from "@repo/ui/lucide-react";
 import { useAgent } from "#/hooks/useAgents";
 
 export const Route = createFileRoute("/dashboard/$agentId")({
@@ -27,6 +27,12 @@ function AgentLayout() {
 			active: pathname.startsWith(`/dashboard/${agentId}/settings`),
 		},
 		{
+			label: "Playground",
+			to: `/dashboard/${agentId}/playground`,
+			icon: FlaskConical,
+			active: pathname === `/dashboard/${agentId}/playground`,
+		},
+		{
 			label: "Components",
 			to: `/dashboard/${agentId}/components`,
 			icon: PanelsTopLeft,
@@ -47,7 +53,7 @@ function AgentLayout() {
 	];
 
 	return (
-		<div className="mx-auto max-w-6xl">
+		<div className={pathname.includes("/playground") ? "max-w-none" : "mx-auto max-w-6xl"}>
 			{/* Agent header */}
 			<div className="mb-6 flex flex-col gap-1">
 				<div className="flex items-center gap-2">

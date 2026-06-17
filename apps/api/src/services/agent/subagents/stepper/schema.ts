@@ -23,7 +23,12 @@ const StepSpecSchema = z.object({
 });
 
 export const StepListSchema = z.object({
-  steps: z.array(StepSpecSchema).min(1),
+  thought: z
+    .string()
+    .min(1)
+    .max(200)
+    .describe("One short line summarizing this chapter's step plan for the live thinking ticker"),
+  steps: z.array(StepSpecSchema).min(1).max(8),
 });
 
 export type StepListSchemaType = z.infer<typeof StepListSchema>;

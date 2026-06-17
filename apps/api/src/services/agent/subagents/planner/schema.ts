@@ -9,7 +9,12 @@ export const PlanChapterSchema = z.object({
 export const PlanSchema = z.object({
   planGoal: z.string().describe("One sentence goal of the entire walkthrough"),
   planRationale: z.string().optional().describe("Why this plan was chosen"),
-  chapters: z.array(PlanChapterSchema).min(1).describe("Ordered list of chapters"),
+  thought: z
+    .string()
+    .min(1)
+    .max(200)
+    .describe("One short line summarizing your planning approach for the live thinking ticker"),
+  chapters: z.array(PlanChapterSchema).min(1).max(6).describe("Ordered list of chapters"),
 });
 
 export type PlanSchemaType = z.infer<typeof PlanSchema>;

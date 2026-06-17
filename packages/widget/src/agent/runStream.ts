@@ -7,6 +7,7 @@ export interface RunStreamOptions {
   query: string;
   hostState?: Record<string, unknown>;
   hostTools?: Array<{ name: string; description: string; parameters?: Record<string, unknown> }>;
+  hostKnowledge?: Array<{ title: string; content: string }>;
   visitorId?: string;
   signal?: AbortSignal;
   onFrame: (frame: RunFrame) => void;
@@ -56,6 +57,7 @@ export async function runStream(opts: RunStreamOptions): Promise<void> {
         query: opts.query,
         hostState: opts.hostState,
         hostTools: opts.hostTools,
+        hostKnowledge: opts.hostKnowledge,
         visitorId: opts.visitorId,
       }),
       signal: controller.signal,

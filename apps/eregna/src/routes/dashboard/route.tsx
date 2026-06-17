@@ -1,5 +1,5 @@
 import { initWidget } from "@repo/widget";
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { DashboardSidebar } from "#/components/dashboard/DashboardSidebar";
 import { useAuth } from "#/lib/auth";
@@ -11,6 +11,8 @@ export const Route = createFileRoute("/dashboard")({
 function DashboardShell() {
 	const { user, loading } = useAuth();
 	const navigate = useNavigate();
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const isPlayground = pathname.includes("/playground");
 
 	useEffect(() => {
 		if (!loading && !user) {
@@ -19,9 +21,9 @@ function DashboardShell() {
 	}, [user, loading, navigate]);
 
 	useEffect(() => {
-		if (loading || !user) return;
+		if (loading || !user || isPlayground) return;
 		return initWidget().unmount;
-	}, [loading, user]);
+	}, [loading, user, isPlayground]);
 
 	if (loading || !user) {
 		return (

@@ -1,6 +1,7 @@
 export interface Plan {
   planGoal: string;
   planRationale?: string;
+  thought: string;
   chapters: PlanChapter[];
 }
 
@@ -11,6 +12,7 @@ export interface PlanChapter {
 }
 
 export interface StepList {
+  thought: string;
   steps: StepSpec[];
 }
 

@@ -16,8 +16,6 @@ import { WalkthroughOverlay } from "./components/WalkthroughOverlay";
 import { DriftDialog } from "./components/DriftDialog";
 import { setActiveManifest } from "./engine/selectors.js";
 import { mountReady } from "./embed/host-api.impl.js";
-import { getState } from "./embed/hostState.js";
-import { getToolDescriptors } from "./embed/hostTools.js";
 import { getVisitorId } from "./embed/visitorId.js";
 import { runStream } from "./agent/runStream.js";
 
@@ -63,7 +61,8 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
   if (!registeredRef.current) {
     registeredRef.current = true;
 
-    mountReady(async (query) => {
+    mountReady(
+      async (query, hostState, hostTools, hostKnowledge) => {
       const startRun = async (q: string, signal: AbortSignal) => {
         const { apiBase: base, agentPublicId: id } = ctxRef.current;
         await runStream({
@@ -71,12 +70,16 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
           agentPublicId: id,
           pageUrl: window.location.href,
           query: q,
-          hostState: getState(),
-          hostTools: getToolDescriptors(),
+          hostState,
+          hostTools,
+          hostKnowledge,
           visitorId: getVisitorId(),
           signal,
           onFrame: (frame) => {
             const d2 = ctxRef.current.dispatch;
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("eregna:frame", { detail: frame }));
+            }
             if (frame.kind === "hello") {
               d2({ type: "SET_CONVERSATION", conversation: frame.conversation });
             } else if (frame.kind === "patch") {
@@ -115,7 +118,12 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
           console.error("[eregna] runStream error", err);
         }
       }
-    });
+    },
+      {
+        open: () => ctxRef.current.dispatch({ type: "SET_MODE", mode: "bubble" }),
+        close: () => ctxRef.current.dispatch({ type: "SET_MODE", mode: "bubble" }),
+      },
+    );
   }
 
   // Abort any in-flight stream on unmount. Single cleanup-only effect.

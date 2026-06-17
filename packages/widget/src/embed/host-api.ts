@@ -1,20 +1,25 @@
 import type { ToolSpec } from "./hostTools.js";
+import type { PlaybackMode } from "./hostConfig.js";
+
+export interface KnowledgeInput {
+  id?: string;
+  title: string;
+  content: string;
+}
 
 export interface HostApi {
-  /** Inject/update host page state that the agent can read. */
   setState(partial: Record<string, unknown>): void;
-
-  /** Register a callable tool the agent can invoke during a walkthrough. */
-  registerTool(spec: ToolSpec): void;
-
-  /** Ask the agent a question; opens the widget and starts a live run. */
+  registerTool(spec: ToolSpec): () => void;
+  addKnowledge(entry: KnowledgeInput): () => void;
+  configure(opts: {
+    redactKeys?: string[];
+    defaultPlayback?: PlaybackMode;
+  }): void;
   ask(query: string): Promise<void>;
-
-  /**
-   * Debug helper for tuning selectors (docs/v2/4-client/04 §3): resolves a
-   * component key (or a raw selector query) against the live page, flashes
-   * the match, and returns it. Console use only — not part of the stable API.
-   */
+  open(): void;
+  close(): void;
+  readonly ready: boolean;
+  onReady(cb: () => void): () => void;
   __debugResolve(
     keyOrQuery: string | { kind: "dom-id" | "css" | "text"; value: string; tag?: string },
   ): Element | null;

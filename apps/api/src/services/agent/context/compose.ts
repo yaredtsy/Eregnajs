@@ -80,6 +80,6 @@ export async function composeContext(opts: ComposeContextOpts): Promise<AgentCon
     hostState: opts.hostState,
     hostTools: opts.hostTools,
     hostKnowledge,
-    conversationHistory: "",  // MVP: fresh session each call
+    conversationHistory: [],
   };
 }

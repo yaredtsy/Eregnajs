@@ -14,12 +14,14 @@ import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as ApiPlaygroundUsageRouteImport } from './routes/api.playground-usage'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as DashboardAgentIdRouteRouteImport } from './routes/dashboard/$agentId/route'
 import { Route as DashboardAgentIdIndexRouteImport } from './routes/dashboard/$agentId/index'
 import { Route as DashboardAgentIdSitemapRouteImport } from './routes/dashboard/$agentId.sitemap'
 import { Route as DashboardAgentIdSettingsRouteImport } from './routes/dashboard/$agentId.settings'
 import { Route as DashboardAgentIdSessionsRouteImport } from './routes/dashboard/$agentId.sessions'
+import { Route as DashboardAgentIdPlaygroundRouteImport } from './routes/dashboard/$agentId.playground'
 import { Route as DashboardAgentIdComponentsRouteImport } from './routes/dashboard/$agentId.components'
 import { Route as DashboardAgentIdKnowledgeIndexRouteImport } from './routes/dashboard/$agentId.knowledge.index'
 import { Route as DashboardAgentIdKnowledgePageIdRouteImport } from './routes/dashboard/$agentId.knowledge.$pageId'
@@ -47,6 +49,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPlaygroundUsageRoute = ApiPlaygroundUsageRouteImport.update({
+  id: '/api/playground-usage',
+  path: '/api/playground-usage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -81,6 +88,12 @@ const DashboardAgentIdSessionsRoute =
     path: '/sessions',
     getParentRoute: () => DashboardAgentIdRouteRoute,
   } as any)
+const DashboardAgentIdPlaygroundRoute =
+  DashboardAgentIdPlaygroundRouteImport.update({
+    id: '/playground',
+    path: '/playground',
+    getParentRoute: () => DashboardAgentIdRouteRoute,
+  } as any)
 const DashboardAgentIdComponentsRoute =
   DashboardAgentIdComponentsRouteImport.update({
     id: '/components',
@@ -106,9 +119,11 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/dashboard/$agentId': typeof DashboardAgentIdRouteRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/playground-usage': typeof ApiPlaygroundUsageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/$agentId/components': typeof DashboardAgentIdComponentsRoute
+  '/dashboard/$agentId/playground': typeof DashboardAgentIdPlaygroundRoute
   '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
   '/dashboard/$agentId/settings': typeof DashboardAgentIdSettingsRoute
   '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
@@ -120,9 +135,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/playground-usage': typeof ApiPlaygroundUsageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/$agentId/components': typeof DashboardAgentIdComponentsRoute
+  '/dashboard/$agentId/playground': typeof DashboardAgentIdPlaygroundRoute
   '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
   '/dashboard/$agentId/settings': typeof DashboardAgentIdSettingsRoute
   '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
@@ -137,9 +154,11 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/dashboard/$agentId': typeof DashboardAgentIdRouteRouteWithChildren
   '/api/health': typeof ApiHealthRoute
+  '/api/playground-usage': typeof ApiPlaygroundUsageRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/$agentId/components': typeof DashboardAgentIdComponentsRoute
+  '/dashboard/$agentId/playground': typeof DashboardAgentIdPlaygroundRoute
   '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
   '/dashboard/$agentId/settings': typeof DashboardAgentIdSettingsRoute
   '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
@@ -155,9 +174,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/dashboard/$agentId'
     | '/api/health'
+    | '/api/playground-usage'
     | '/auth/callback'
     | '/dashboard/'
     | '/dashboard/$agentId/components'
+    | '/dashboard/$agentId/playground'
     | '/dashboard/$agentId/sessions'
     | '/dashboard/$agentId/settings'
     | '/dashboard/$agentId/sitemap'
@@ -169,9 +190,11 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/api/health'
+    | '/api/playground-usage'
     | '/auth/callback'
     | '/dashboard'
     | '/dashboard/$agentId/components'
+    | '/dashboard/$agentId/playground'
     | '/dashboard/$agentId/sessions'
     | '/dashboard/$agentId/settings'
     | '/dashboard/$agentId/sitemap'
@@ -185,9 +208,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/dashboard/$agentId'
     | '/api/health'
+    | '/api/playground-usage'
     | '/auth/callback'
     | '/dashboard/'
     | '/dashboard/$agentId/components'
+    | '/dashboard/$agentId/playground'
     | '/dashboard/$agentId/sessions'
     | '/dashboard/$agentId/settings'
     | '/dashboard/$agentId/sitemap'
@@ -201,6 +226,7 @@ export interface RootRouteChildren {
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiPlaygroundUsageRoute: typeof ApiPlaygroundUsageRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
@@ -239,6 +265,13 @@ declare module '@tanstack/react-router' {
       path: '/auth/callback'
       fullPath: '/auth/callback'
       preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/playground-usage': {
+      id: '/api/playground-usage'
+      path: '/api/playground-usage'
+      fullPath: '/api/playground-usage'
+      preLoaderRoute: typeof ApiPlaygroundUsageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -283,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAgentIdSessionsRouteImport
       parentRoute: typeof DashboardAgentIdRouteRoute
     }
+    '/dashboard/$agentId/playground': {
+      id: '/dashboard/$agentId/playground'
+      path: '/playground'
+      fullPath: '/dashboard/$agentId/playground'
+      preLoaderRoute: typeof DashboardAgentIdPlaygroundRouteImport
+      parentRoute: typeof DashboardAgentIdRouteRoute
+    }
     '/dashboard/$agentId/components': {
       id: '/dashboard/$agentId/components'
       path: '/components'
@@ -309,6 +349,7 @@ declare module '@tanstack/react-router' {
 
 interface DashboardAgentIdRouteRouteChildren {
   DashboardAgentIdComponentsRoute: typeof DashboardAgentIdComponentsRoute
+  DashboardAgentIdPlaygroundRoute: typeof DashboardAgentIdPlaygroundRoute
   DashboardAgentIdSessionsRoute: typeof DashboardAgentIdSessionsRoute
   DashboardAgentIdSettingsRoute: typeof DashboardAgentIdSettingsRoute
   DashboardAgentIdSitemapRoute: typeof DashboardAgentIdSitemapRoute
@@ -319,6 +360,7 @@ interface DashboardAgentIdRouteRouteChildren {
 
 const DashboardAgentIdRouteRouteChildren: DashboardAgentIdRouteRouteChildren = {
   DashboardAgentIdComponentsRoute: DashboardAgentIdComponentsRoute,
+  DashboardAgentIdPlaygroundRoute: DashboardAgentIdPlaygroundRoute,
   DashboardAgentIdSessionsRoute: DashboardAgentIdSessionsRoute,
   DashboardAgentIdSettingsRoute: DashboardAgentIdSettingsRoute,
   DashboardAgentIdSitemapRoute: DashboardAgentIdSitemapRoute,
@@ -351,6 +393,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiPlaygroundUsageRoute: ApiPlaygroundUsageRoute,
   AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
