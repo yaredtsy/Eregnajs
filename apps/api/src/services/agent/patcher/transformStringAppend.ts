@@ -1,4 +1,4 @@
-import type { Operation } from "fast-json-patch";
+import type { Operation } from "@repo/walkthrough-core";
 import type { StringAppendOp } from "@repo/walkthrough-core";
 import { isStreamablePath } from "./streamablePaths.js";
 

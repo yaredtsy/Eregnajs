@@ -9,23 +9,22 @@ import { pagesRouter } from './routes/pages.js'
 import { sessionsRouter } from './routes/sessions.js'
 import { factsRouter } from './routes/facts.js'
 import { publicRouter } from './routes/public.js'
+import { applyCorsHeaders, resolveV1CorsOrigin } from './lib/cors.js'
 
 export const app = new Hono()
 
 app.use('*', logger())
 
-// Two CORS surfaces (docs/v2/2-system/01 §2): the dashboard surface can be
-// pinned to known origins; the embed surface must accept any browser origin —
-// per-agent origin *authorization* happens inside the public route.
-const corsOrigins = process.env.EREGNA_CORS_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean)
+// Dashboard CORS — use a callback so localhost:3000 vs 127.0.0.1:3000 both work.
 app.use(
   '/v1/*',
   cors({
-    origin: corsOrigins?.length ? corsOrigins : '*',
+    origin: (origin) => resolveV1CorsOrigin(origin),
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   }),
 )
+
 app.use(
   '/public/*',
   cors({
@@ -51,7 +50,11 @@ app.route('/public', publicRouter)
 
 app.onError((err, c) => {
   console.error(err)
+  applyCorsHeaders(c)
   return c.json({ error: 'Internal server error' }, 500)
 })
 
-app.notFound((c) => c.json({ error: 'Not found' }, 404))
+app.notFound((c) => {
+  applyCorsHeaders(c)
+  return c.json({ error: 'Not found' }, 404)
+})

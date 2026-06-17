@@ -2,9 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 
 const storageKey = (agentId: string) => `eregna:playground:${agentId}`;
 
+import type { StageSceneId } from "#/playground/stage/stageScenes";
+
 export interface PlaygroundConfig {
   stateJson: string;
   query: string;
+  activeScene: StageSceneId;
   activePanel: "state" | "tools" | "knowledge" | "run" | "stream";
   runMode: "context" | "plan" | "step" | "narrate" | "full";
   chapterIndex: number;
@@ -13,6 +16,7 @@ export interface PlaygroundConfig {
 const DEFAULT: PlaygroundConfig = {
   stateJson: JSON.stringify({ user: { plan: "free" }, invoiceCount: 0 }, null, 2),
   query: "How do I export my orders?",
+  activeScene: "orders",
   activePanel: "run",
   runMode: "full",
   chapterIndex: 0,

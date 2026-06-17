@@ -1,4 +1,4 @@
-import type { Operation } from "fast-json-patch";
+import type { Operation } from "../lib/fastJsonPatch.js";
 
 export type JsonPatchOp = Operation;
 

@@ -1,4 +1,4 @@
-import { applyOperation } from "fast-json-patch";
+import { applyOperation } from "../lib/fastJsonPatch.js";
 import type { Conversation } from "./types.js";
 import type { WireOp, PatchFrame } from "../patch/types.js";
 import { isStringAppend } from "../patch/types.js";

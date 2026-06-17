@@ -26,6 +26,10 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
   ],
+  ssr: {
+    // Pre-bundle CJS deps used by @repo/walkthrough-core during SSR.
+    noExternal: ['fast-json-patch'],
+  },
 })
 
 export default config

@@ -37,6 +37,9 @@ export { isStringAppend, WIRE_PROTOCOL } from "./patch/types.js";
 
 export { applyOps, applyPatchFrame } from "./conversation/applyPatch.js";
 
+export { observe, generate } from "./lib/fastJsonPatch.js";
+export type { Operation, Observer } from "./lib/fastJsonPatch.js";
+
 export { toLangChain, textFromChunk } from "./conversation/langchain.js";
 
 export {

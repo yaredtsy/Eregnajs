@@ -1,4 +1,4 @@
-import { observe, generate, type Observer } from "fast-json-patch";
+import { observe, generate, type Observer } from "@repo/walkthrough-core";
 import type { Conversation } from "@repo/walkthrough-core";
 import type { PatchFrame } from "@repo/walkthrough-core";
 import { makeTransformer, type WireOp } from "./transformStringAppend.js";
