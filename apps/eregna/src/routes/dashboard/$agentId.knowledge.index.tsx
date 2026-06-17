@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Modal } from "#/components/ui/Modal";
 import { PageTreeView } from "#/components/pages/PageTreeView";
+import { SiteFactsSection } from "#/components/knowledge/SiteFactsSection";
 import { useCreatePage, useDeletePage, usePages } from "#/hooks/usePages";
 
 export const Route = createFileRoute("/dashboard/$agentId/knowledge/")({
@@ -180,6 +181,8 @@ function KnowledgeIndexPage() {
 					</form>
 				</Modal>
 			)}
+
+			<SiteFactsSection agentId={agentId} />
 		</>
 	);
 }

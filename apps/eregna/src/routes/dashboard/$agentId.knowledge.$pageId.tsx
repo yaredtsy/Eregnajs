@@ -1,6 +1,7 @@
 import { ArrowLeft, Trash2 } from "@repo/ui/lucide-react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { SelectorListEditor } from "#/components/elements/SelectorListEditor";
 import { useAgent } from "#/hooks/useAgents";
 import {
 	useCreateElement,
@@ -9,7 +10,12 @@ import {
 	useUpdateElement,
 } from "#/hooks/useElements";
 import { useDeletePage, usePages, useUpdatePage } from "#/hooks/usePages";
-import type { ElementItem } from "#/lib/api-types";
+import type { ElementItem, SelectorQuery } from "#/lib/api-types";
+import {
+	selectorsFromElement,
+	slugifyComponentKey,
+	emptySelector,
+} from "#/lib/selectors";
 
 export const Route = createFileRoute("/dashboard/$agentId/knowledge/$pageId")({
 	component: PageEditorPage,
@@ -252,8 +258,9 @@ function PageEditorPage() {
 			<section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
 				<h2 className="mb-2 text-sm font-semibold text-foreground">Elements</h2>
 				<p className="mb-6 text-xs text-muted-foreground">
-					Map regions of this page with a label and either a DOM id or CSS
-					selector.
+					Components are what the agent can point at. Give each a stable{" "}
+					<strong>key</strong> (the LLM&apos;s symbol), a visitor-friendly label,
+					and ordered selector queries — most stable first.
 				</p>
 
 				{elLoading ? (
@@ -288,8 +295,8 @@ function ElementBlock({
 	element: ElementItem;
 	onSave: (body: {
 		label: string;
-		dom_id: string | null;
-		css_selector: string | null;
+		key: string;
+		selectors: SelectorQuery[];
 		description: string | null;
 		notes: string | null;
 		sort_order: number;
@@ -298,8 +305,10 @@ function ElementBlock({
 	busy: boolean;
 }) {
 	const [label, setLabel] = useState(el.label);
-	const [domId, setDomId] = useState(el.dom_id ?? "");
-	const [cssSel, setCssSel] = useState(el.css_selector ?? "");
+	const [key, setKey] = useState(el.key);
+	const [selectors, setSelectors] = useState<SelectorQuery[]>(() =>
+		selectorsFromElement(el),
+	);
 	const [desc, setDesc] = useState(el.description ?? "");
 	const [notes, setNotes] = useState(el.notes ?? "");
 	const [order, setOrder] = useState(el.sort_order);
@@ -307,8 +316,8 @@ function ElementBlock({
 
 	useEffect(() => {
 		setLabel(el.label);
-		setDomId(el.dom_id ?? "");
-		setCssSel(el.css_selector ?? "");
+		setKey(el.key);
+		setSelectors(selectorsFromElement(el));
 		setDesc(el.description ?? "");
 		setNotes(el.notes ?? "");
 		setOrder(el.sort_order);
@@ -316,8 +325,8 @@ function ElementBlock({
 
 	const dirty =
 		label !== el.label ||
-		domId !== (el.dom_id ?? "") ||
-		cssSel !== (el.css_selector ?? "") ||
+		key !== el.key ||
+		JSON.stringify(selectors) !== JSON.stringify(selectorsFromElement(el)) ||
 		desc !== (el.description ?? "") ||
 		notes !== (el.notes ?? "") ||
 		order !== el.sort_order;
@@ -349,35 +358,34 @@ function ElementBlock({
 						onChange={(e) => setLabel(e.target.value)}
 						className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
 					/>
+					<p className="mt-1 text-[11px] text-muted-foreground">
+						What a visitor would call it — &quot;Export button&quot;, not
+						&quot;btn-exp-2&quot;.
+					</p>
 				</div>
-				<div>
+				<div className="sm:col-span-2">
 					<label
-						htmlFor={`${uid}-dom`}
+						htmlFor={`${uid}-key`}
 						className="mb-1 block text-xs text-muted-foreground"
 					>
-						DOM id
+						Key
 					</label>
 					<input
-						id={`${uid}-dom`}
-						value={domId}
-						onChange={(e) => setDomId(e.target.value)}
-						className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-						placeholder="hero"
+						id={`${uid}-key`}
+						value={key}
+						onChange={(e) => setKey(e.target.value)}
+						className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm"
 					/>
+					<p className="mt-1 text-[11px] text-amber-500/90">
+						Stable forever — the LLM and replays reference this symbol. Change
+						only if you know what you&apos;re doing.
+					</p>
 				</div>
-				<div>
-					<label
-						htmlFor={`${uid}-css`}
-						className="mb-1 block text-xs text-muted-foreground"
-					>
-						CSS selector
-					</label>
-					<input
-						id={`${uid}-css`}
-						value={cssSel}
-						onChange={(e) => setCssSel(e.target.value)}
-						className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-						placeholder="#main article"
+				<div className="sm:col-span-2">
+					<SelectorListEditor
+						selectors={selectors}
+						onChange={setSelectors}
+						componentKey={key}
 					/>
 				</div>
 				<div className="sm:col-span-2">
@@ -392,6 +400,7 @@ function ElementBlock({
 						value={desc}
 						onChange={(e) => setDesc(e.target.value)}
 						rows={2}
+						placeholder="What it does and when it matters — the planner reads this."
 						className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm"
 					/>
 				</div>
@@ -407,6 +416,7 @@ function ElementBlock({
 						value={notes}
 						onChange={(e) => setNotes(e.target.value)}
 						rows={2}
+						placeholder='Stepper-only: "disabled until a row is selected".'
 						className="w-full resize-y rounded-lg border border-border bg-background px-3 py-2 text-sm"
 					/>
 				</div>
@@ -433,14 +443,17 @@ function ElementBlock({
 					disabled={!dirty || busy}
 					onClick={() => {
 						setErr(null);
-						if (!domId.trim() && !cssSel.trim()) {
-							setErr("Provide DOM id or CSS selector.");
+						const clean = selectors
+							.map((s) => ({ ...s, value: s.value.trim() }))
+							.filter((s) => s.value.length > 0);
+						if (clean.length === 0) {
+							setErr("Add at least one selector with a value.");
 							return;
 						}
 						void onSave({
 							label: label.trim(),
-							dom_id: domId.trim() || null,
-							css_selector: cssSel.trim() || null,
+							key: key.trim(),
+							selectors: clean,
 							description: desc.trim() || null,
 							notes: notes.trim() || null,
 							sort_order: order,
@@ -456,7 +469,7 @@ function ElementBlock({
 					type="button"
 					disabled={busy}
 					onClick={() => {
-						if (window.confirm(`Delete element “${el.label}”?`)) onDelete();
+						if (window.confirm(`Delete element "${el.label}"?`)) onDelete();
 					}}
 					className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-45"
 				>
@@ -475,11 +488,18 @@ function NewElementForm({
 	createEl: ReturnType<typeof useCreateElement>;
 }) {
 	const [label, setLabel] = useState("");
-	const [domId, setDomId] = useState("");
-	const [cssSel, setCssSel] = useState("");
+	const [key, setKey] = useState("");
+	const [keyTouched, setKeyTouched] = useState(false);
+	const [selectors, setSelectors] = useState<SelectorQuery[]>([emptySelector()]);
 	const [desc, setDesc] = useState("");
 	const [parentId, setParentId] = useState("");
 	const [err, setErr] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (!keyTouched && label.trim()) {
+			setKey(slugifyComponentKey(label));
+		}
+	}, [label, keyTouched]);
 
 	async function submit(e: React.FormEvent) {
 		e.preventDefault();
@@ -488,21 +508,25 @@ function NewElementForm({
 			setErr("Label is required.");
 			return;
 		}
-		if (!domId.trim() && !cssSel.trim()) {
-			setErr("Provide DOM id or CSS selector.");
+		const clean = selectors
+			.map((s) => ({ ...s, value: s.value.trim() }))
+			.filter((s) => s.value.length > 0);
+		if (clean.length === 0) {
+			setErr("Add at least one selector with a value.");
 			return;
 		}
 		try {
 			await createEl.mutateAsync({
 				label: label.trim(),
-				dom_id: domId.trim() || null,
-				css_selector: cssSel.trim() || null,
+				key: key.trim() || undefined,
+				selectors: clean,
 				description: desc.trim() || null,
 				parent_id: parentId || null,
 			});
 			setLabel("");
-			setDomId("");
-			setCssSel("");
+			setKey("");
+			setKeyTouched(false);
+			setSelectors([emptySelector()]);
 			setDesc("");
 			setParentId("");
 		} catch (e) {
@@ -513,7 +537,7 @@ function NewElementForm({
 	return (
 		<div className="rounded-xl border border-dashed border-border bg-background/40 p-4">
 			<h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-				New element
+				New component
 			</h3>
 			<form
 				onSubmit={(e) => void submit(e)}
@@ -531,35 +555,32 @@ function NewElementForm({
 						value={label}
 						onChange={(e) => setLabel(e.target.value)}
 						className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-						placeholder="Hero section"
+						placeholder="Export button"
 					/>
 				</div>
-				<div>
+				<div className="sm:col-span-2">
 					<label
-						htmlFor="new-el-dom"
+						htmlFor="new-el-key"
 						className="mb-1 block text-xs text-muted-foreground"
 					>
-						DOM id
+						Key
 					</label>
 					<input
-						id="new-el-dom"
-						value={domId}
-						onChange={(e) => setDomId(e.target.value)}
-						className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+						id="new-el-key"
+						value={key}
+						onChange={(e) => {
+							setKeyTouched(true);
+							setKey(e.target.value);
+						}}
+						className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm"
+						placeholder="export-button"
 					/>
 				</div>
-				<div>
-					<label
-						htmlFor="new-el-css"
-						className="mb-1 block text-xs text-muted-foreground"
-					>
-						CSS selector
-					</label>
-					<input
-						id="new-el-css"
-						value={cssSel}
-						onChange={(e) => setCssSel(e.target.value)}
-						className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+				<div className="sm:col-span-2">
+					<SelectorListEditor
+						selectors={selectors}
+						onChange={setSelectors}
+						componentKey={key}
 					/>
 				</div>
 				<div className="sm:col-span-2">
@@ -578,7 +599,7 @@ function NewElementForm({
 						<option value="">— None —</option>
 						{elements.map((el) => (
 							<option key={el.id} value={el.id}>
-								{el.label} ({String(el.path)})
+								{el.label} ({el.key})
 							</option>
 						))}
 					</select>
@@ -607,7 +628,7 @@ function NewElementForm({
 						disabled={createEl.isPending}
 						className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
 					>
-						{createEl.isPending ? "Adding…" : "Add element"}
+						{createEl.isPending ? "Adding…" : "Add component"}
 					</button>
 				</div>
 			</form>

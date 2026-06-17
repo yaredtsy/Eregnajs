@@ -1,5 +1,5 @@
 import type { WalkthroughPart } from "../../types/conversation";
-import { useWidgetDispatch } from "../../store/widget-context";
+import { usePreflightPlay } from "../../hooks/useHistoryDrift";
 
 interface Props {
   wt: WalkthroughPart;
@@ -7,14 +7,12 @@ interface Props {
 }
 
 export function WalkthroughCard({ wt, isActive }: Props) {
-  const dispatch = useWidgetDispatch();
+  const playWalkthrough = usePreflightPlay();
 
   return (
     <button
       className={`eregna-wt-card ${isActive ? "eregna-wt-card--active" : ""}`}
-      onClick={() =>
-        dispatch({ type: "PLAY_WALKTHROUGH", walkthroughId: wt.walkthroughId })
-      }
+      onClick={() => playWalkthrough(wt.walkthroughId, wt)}
       type="button"
     >
       <span className="eregna-wt-card__icon" aria-hidden>

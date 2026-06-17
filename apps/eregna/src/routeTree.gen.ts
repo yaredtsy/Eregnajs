@@ -20,6 +20,7 @@ import { Route as DashboardAgentIdIndexRouteImport } from './routes/dashboard/$a
 import { Route as DashboardAgentIdSitemapRouteImport } from './routes/dashboard/$agentId.sitemap'
 import { Route as DashboardAgentIdSettingsRouteImport } from './routes/dashboard/$agentId.settings'
 import { Route as DashboardAgentIdSessionsRouteImport } from './routes/dashboard/$agentId.sessions'
+import { Route as DashboardAgentIdComponentsRouteImport } from './routes/dashboard/$agentId.components'
 import { Route as DashboardAgentIdKnowledgeIndexRouteImport } from './routes/dashboard/$agentId.knowledge.index'
 import { Route as DashboardAgentIdKnowledgePageIdRouteImport } from './routes/dashboard/$agentId.knowledge.$pageId'
 
@@ -80,6 +81,12 @@ const DashboardAgentIdSessionsRoute =
     path: '/sessions',
     getParentRoute: () => DashboardAgentIdRouteRoute,
   } as any)
+const DashboardAgentIdComponentsRoute =
+  DashboardAgentIdComponentsRouteImport.update({
+    id: '/components',
+    path: '/components',
+    getParentRoute: () => DashboardAgentIdRouteRoute,
+  } as any)
 const DashboardAgentIdKnowledgeIndexRoute =
   DashboardAgentIdKnowledgeIndexRouteImport.update({
     id: '/knowledge/',
@@ -101,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/$agentId/components': typeof DashboardAgentIdComponentsRoute
   '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
   '/dashboard/$agentId/settings': typeof DashboardAgentIdSettingsRoute
   '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
@@ -114,6 +122,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/$agentId/components': typeof DashboardAgentIdComponentsRoute
   '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
   '/dashboard/$agentId/settings': typeof DashboardAgentIdSettingsRoute
   '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
@@ -130,6 +139,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/$agentId/components': typeof DashboardAgentIdComponentsRoute
   '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
   '/dashboard/$agentId/settings': typeof DashboardAgentIdSettingsRoute
   '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/callback'
     | '/dashboard/'
+    | '/dashboard/$agentId/components'
     | '/dashboard/$agentId/sessions'
     | '/dashboard/$agentId/settings'
     | '/dashboard/$agentId/sitemap'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/callback'
     | '/dashboard'
+    | '/dashboard/$agentId/components'
     | '/dashboard/$agentId/sessions'
     | '/dashboard/$agentId/settings'
     | '/dashboard/$agentId/sitemap'
@@ -175,6 +187,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/callback'
     | '/dashboard/'
+    | '/dashboard/$agentId/components'
     | '/dashboard/$agentId/sessions'
     | '/dashboard/$agentId/settings'
     | '/dashboard/$agentId/sitemap'
@@ -270,6 +283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAgentIdSessionsRouteImport
       parentRoute: typeof DashboardAgentIdRouteRoute
     }
+    '/dashboard/$agentId/components': {
+      id: '/dashboard/$agentId/components'
+      path: '/components'
+      fullPath: '/dashboard/$agentId/components'
+      preLoaderRoute: typeof DashboardAgentIdComponentsRouteImport
+      parentRoute: typeof DashboardAgentIdRouteRoute
+    }
     '/dashboard/$agentId/knowledge/': {
       id: '/dashboard/$agentId/knowledge/'
       path: '/knowledge'
@@ -288,6 +308,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface DashboardAgentIdRouteRouteChildren {
+  DashboardAgentIdComponentsRoute: typeof DashboardAgentIdComponentsRoute
   DashboardAgentIdSessionsRoute: typeof DashboardAgentIdSessionsRoute
   DashboardAgentIdSettingsRoute: typeof DashboardAgentIdSettingsRoute
   DashboardAgentIdSitemapRoute: typeof DashboardAgentIdSitemapRoute
@@ -297,6 +318,7 @@ interface DashboardAgentIdRouteRouteChildren {
 }
 
 const DashboardAgentIdRouteRouteChildren: DashboardAgentIdRouteRouteChildren = {
+  DashboardAgentIdComponentsRoute: DashboardAgentIdComponentsRoute,
   DashboardAgentIdSessionsRoute: DashboardAgentIdSessionsRoute,
   DashboardAgentIdSettingsRoute: DashboardAgentIdSettingsRoute,
   DashboardAgentIdSitemapRoute: DashboardAgentIdSitemapRoute,

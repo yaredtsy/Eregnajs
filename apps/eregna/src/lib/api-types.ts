@@ -56,12 +56,20 @@ export type UpdatePageBody = {
 	sort_order?: number;
 };
 
+export type SelectorQuery = {
+	kind: "dom-id" | "css" | "text";
+	value: string;
+	tag?: string;
+};
+
 export type ElementItem = {
 	id: string;
 	page_id: string;
 	path: string;
 	parent_id: string | null;
 	label: string;
+	key: string;
+	selectors: SelectorQuery[];
 	dom_id: string | null;
 	css_selector: string | null;
 	xpath: string | null;
@@ -77,6 +85,8 @@ export type CreateElementBody = {
 	page_id: string;
 	parent_id?: string | null;
 	label: string;
+	key?: string;
+	selectors?: SelectorQuery[];
 	dom_id?: string | null;
 	css_selector?: string | null;
 	description?: string | null;
@@ -86,10 +96,35 @@ export type CreateElementBody = {
 
 export type UpdateElementBody = {
 	label?: string;
+	key?: string;
+	selectors?: SelectorQuery[];
 	dom_id?: string | null;
 	css_selector?: string | null;
 	description?: string | null;
 	notes?: string | null;
+	sort_order?: number;
+};
+
+export type SiteFactItem = {
+	id: string;
+	agent_id: string;
+	title: string;
+	content: string;
+	sort_order: number;
+	created_at: string;
+	updated_at: string;
+};
+
+export type CreateSiteFactBody = {
+	agent_id: string;
+	title: string;
+	content: string;
+	sort_order?: number;
+};
+
+export type UpdateSiteFactBody = {
+	title?: string;
+	content?: string;
 	sort_order?: number;
 };
 

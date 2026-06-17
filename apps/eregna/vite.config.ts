@@ -16,6 +16,7 @@ const config = defineConfig({
     tsconfigPaths: true,
     alias: {
       '@repo/widget': path.resolve(__dirname, '../../packages/widget/src/index.ts'),
+      '@repo/widget-internals': path.resolve(__dirname, '../../packages/widget/src'),
     },
   },
   plugins: [

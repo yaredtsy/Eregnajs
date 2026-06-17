@@ -5,11 +5,21 @@ interface Props {
   title?: string;
   visibleText: string;
   anchorRect: DOMRect | null;
-  footer?: string;            // tool result card (docs/v2 flows/01 §5)
+  footer?: string;
   variant?: "default" | "notice";
+  onContinue?: () => void;
+  onStop?: () => void;
 }
 
-export function Popover({ title, visibleText, anchorRect, footer, variant = "default" }: Props) {
+export function Popover({
+  title,
+  visibleText,
+  anchorRect,
+  footer,
+  variant = "default",
+  onContinue,
+  onStop,
+}: Props) {
   const style = anchorRect
     ? computePosition(anchorRect)
     : { position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
@@ -20,7 +30,7 @@ export function Popover({ title, visibleText, anchorRect, footer, variant = "def
       style={{
         ...style,
         zIndex: 2147483645,
-        pointerEvents: "none",
+        pointerEvents: isNotice ? "auto" : "none",
         width: POPOVER_WIDTH,
         background: "#1e1e2e",
         border: isNotice ? "1px solid rgba(244,63,94,0.5)" : "1px solid rgba(99,102,241,0.4)",
@@ -78,6 +88,49 @@ export function Popover({ title, visibleText, anchorRect, footer, variant = "def
           {footer}
         </p>
       )}
+      {isNotice && onContinue && onStop ? (
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            marginTop: 12,
+            pointerEvents: "auto",
+          }}
+        >
+          <button
+            type="button"
+            onClick={onContinue}
+            style={{
+              flex: 1,
+              border: "none",
+              borderRadius: 8,
+              padding: "8px 10px",
+              background: "#6366f1",
+              color: "#fff",
+              fontWeight: 600,
+              fontSize: 12,
+              cursor: "pointer",
+            }}
+          >
+            Continue
+          </button>
+          <button
+            type="button"
+            onClick={onStop}
+            style={{
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: 8,
+              padding: "8px 10px",
+              background: "transparent",
+              color: "#94a3b8",
+              fontSize: 12,
+              cursor: "pointer",
+            }}
+          >
+            Stop
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -86,10 +139,8 @@ function computePosition(rect: DOMRect): React.CSSProperties {
   const vpW = window.innerWidth;
   const vpH = window.innerHeight;
 
-  // prefer below, then above, then right
   const spaceBelow = vpH - rect.bottom;
   const spaceAbove = rect.top;
-  const spaceRight = vpW - rect.right;
 
   let top: number;
   let left: number;
@@ -105,8 +156,6 @@ function computePosition(rect: DOMRect): React.CSSProperties {
     left = vpW - POPOVER_WIDTH - MARGIN;
   }
   if (left < MARGIN) left = MARGIN;
-
-  void spaceRight;
 
   return { position: "fixed", top, left };
 }

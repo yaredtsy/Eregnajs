@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { SAMPLE_CONVERSATION } from "./data/sample-conversation";
 import {
   WidgetProvider,
@@ -8,12 +8,16 @@ import {
 } from "./store/widget-context";
 import { usePlayer } from "./hooks/usePlayer";
 import { useLiveEngine } from "./hooks/useLiveEngine";
+import { useHistoryDrift } from "./hooks/useHistoryDrift";
 import { BubbleFAB } from "./components/BubbleFAB";
 import { ChatPopup } from "./components/ChatPopup";
 import { DetachedPlayer } from "./components/DetachedPlayer";
 import { WalkthroughOverlay } from "./components/WalkthroughOverlay";
+import { DriftDialog } from "./components/DriftDialog";
 import { setActiveManifest } from "./engine/selectors.js";
 import { mountReady } from "./embed/host-api.impl.js";
+import { getState } from "./embed/hostState.js";
+import { getToolDescriptors } from "./embed/hostTools.js";
 import { getVisitorId } from "./embed/visitorId.js";
 import { runStream } from "./agent/runStream.js";
 
@@ -28,7 +32,15 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
   usePlayer();
   useLiveEngine();
 
-  // Keep the engine's key→selector map pointed at the playing walkthrough.
+  const handleDriftEscalation = useCallback(
+    (walkthroughId: string, query: string | null) => {
+      dispatch({ type: "SHOW_DRIFT_DIALOG", walkthroughId, query });
+    },
+    [dispatch],
+  );
+  useHistoryDrift(handleDriftEscalation);
+
+  const askRef = useRef<((query: string) => Promise<void>) | null>(null);
   const manifest = activeWt?.manifest ?? null;
   useEffect(() => {
     setActiveManifest(manifest);
@@ -51,29 +63,21 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
   if (!registeredRef.current) {
     registeredRef.current = true;
 
-    mountReady(async (query, hostState, hostTools) => {
-      controllerRef.current?.abort();
-      controllerRef.current = new AbortController();
-
-      const { dispatch: d, apiBase: base, agentPublicId: id } = ctxRef.current;
-      d({ type: "SET_PLAY_MODE", playMode: "live" });
-      d({ type: "SET_MODE", mode: "bubble" });
-
-      try {
+    mountReady(async (query) => {
+      const startRun = async (q: string, signal: AbortSignal) => {
+        const { apiBase: base, agentPublicId: id } = ctxRef.current;
         await runStream({
           apiBase: base,
           agentPublicId: id,
           pageUrl: window.location.href,
-          query,
-          hostState,
-          hostTools,
+          query: q,
+          hostState: getState(),
+          hostTools: getToolDescriptors(),
           visitorId: getVisitorId(),
-          signal: controllerRef.current.signal,
+          signal,
           onFrame: (frame) => {
             const d2 = ctxRef.current.dispatch;
             if (frame.kind === "hello") {
-              // Replace the local document with the server's seeded one so
-              // patches apply onto exactly what the server is mutating.
               d2({ type: "SET_CONVERSATION", conversation: frame.conversation });
             } else if (frame.kind === "patch") {
               d2({ type: "APPLY_PATCH", frame });
@@ -82,6 +86,30 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
             }
           },
         });
+      };
+
+      controllerRef.current?.abort();
+      controllerRef.current = new AbortController();
+      askRef.current = async (q) => {
+        controllerRef.current?.abort();
+        controllerRef.current = new AbortController();
+        ctxRef.current.dispatch({ type: "SET_PLAY_MODE", playMode: "live" });
+        ctxRef.current.dispatch({ type: "SET_MODE", mode: "bubble" });
+        try {
+          await startRun(q, controllerRef.current.signal);
+        } catch (err) {
+          if ((err as DOMException).name !== "AbortError") {
+            console.error("[eregna] runStream error", err);
+          }
+        }
+      };
+
+      const { dispatch: d } = ctxRef.current;
+      d({ type: "SET_PLAY_MODE", playMode: "live" });
+      d({ type: "SET_MODE", mode: "bubble" });
+
+      try {
+        await startRun(query, controllerRef.current.signal);
       } catch (err) {
         if ((err as DOMException).name !== "AbortError") {
           console.error("[eregna] runStream error", err);
@@ -108,9 +136,25 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
     dispatch({ type: "SET_MODE", mode: "detached" });
   }, [detachKey]); // dispatch is stable by React contract — omitted
 
+  const drift = state.driftDialog;
+
   return (
     <>
       <WalkthroughOverlay />
+      {drift ? (
+        <DriftDialog
+          onRegenerate={() => {
+            dispatch({ type: "CLOSE_DRIFT_DIALOG" });
+            dispatch({ type: "STOP_WALKTHROUGH" });
+            const q = drift.query?.trim();
+            if (q && askRef.current) void askRef.current(q);
+          }}
+          onStop={() => {
+            dispatch({ type: "CLOSE_DRIFT_DIALOG" });
+            dispatch({ type: "STOP_WALKTHROUGH" });
+          }}
+        />
+      ) : null}
       <div className="eregna-widget-root">
         {state.mode === "bubble" && <ChatPopup />}
         {state.mode === "detached" && <DetachedPlayer />}

@@ -1,5 +1,4 @@
 import type { WalkthroughChapter, WalkthroughPart } from "../../types/conversation";
-import { computeStepDuration } from "../../types/conversation";
 import { useWidget, useWidgetDispatch, cumulativeMsAtStep } from "../../store/widget-context";
 
 interface Segment {
@@ -19,6 +18,7 @@ function buildSegments(
   isLive: boolean,
   stepOffsetMs: number,
   currentStepIndex: number,
+  runtimeSkips: Record<number, string>,
 ): Segment[] {
   return wt.chapters.map((chapter, i) => {
     const startStep = chapter.stepIndex >= 0 ? chapter.stepIndex : wt.steps.length;
@@ -51,7 +51,9 @@ function buildSegments(
       weight,
       fillPct,
       failed: chapter.status === "failed",
-      hasSkips: steps.some((s) => s.status === "skipped"),
+      hasSkips: steps.some(
+        (s, j) => s.status === "skipped" || runtimeSkips[startStep + j],
+      ),
       isCurrent: currentStepIndex >= startStep && currentStepIndex < endStep,
     };
   });
@@ -64,7 +66,13 @@ export function ChapterTimeline() {
   if (!activeWt || activeWt.chapters.length === 0) return null;
 
   const isLive = state.playMode === "live";
-  const segments = buildSegments(activeWt, isLive, state.stepOffsetMs, stepIndex);
+  const segments = buildSegments(
+    activeWt,
+    isLive,
+    state.stepOffsetMs,
+    stepIndex,
+    state.runtimeSkips,
+  );
 
   function seekTo(seg: Segment) {
     if (isLive || !activeWt || seg.startStep >= activeWt.steps.length) return;

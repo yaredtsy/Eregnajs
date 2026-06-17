@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { useWidget } from "../../store/widget-context";
+import { useWidget, useWidgetDispatch } from "../../store/widget-context";
 import { useElementRect } from "../../hooks/useElementRect";
 import { TYPEWRITER_MS_PER_CHAR } from "../../types/conversation";
 import { getActiveManifest } from "../../engine/selectors.js";
@@ -11,7 +11,6 @@ function targetKeyOf(actions: { type: string; elementId?: string }[]): string | 
   return highlight?.elementId ?? null;
 }
 
-// Visitor-facing message for a skipped step (docs/v2/4-client/03 §3).
 function skipMessage(skipReason: string | undefined, hint?: string): string {
   if (hint) return hint;
   const [code, key] = (skipReason ?? "").split(":");
@@ -30,6 +29,7 @@ function skipMessage(skipReason: string | undefined, hint?: string): string {
 
 export function WalkthroughOverlay() {
   const { activeWt, stepIndex, localOffsetMs, state } = useWidget();
+  const dispatch = useWidgetDispatch();
 
   const isActive =
     state.status === "playing" ||
@@ -37,20 +37,24 @@ export function WalkthroughOverlay() {
     state.status === "complete";
 
   const step = activeWt && isActive ? activeWt.steps[stepIndex] : null;
-  const highlightKey = step ? targetKeyOf(step.actions) : null;
+  const runtimeSkip = state.runtimeSkips[stepIndex];
+  const isSkipped = step?.status === "skipped" || Boolean(runtimeSkip);
+  const skipReason = step?.skipReason ?? runtimeSkip;
+  const highlightKey = step && !isSkipped ? targetKeyOf(step.actions) : null;
 
   const rect = useElementRect(highlightKey);
 
   if (!step || !isActive) return null;
 
-  // Skipped step: a viewport-center notice instead of a broken spotlight.
-  if (step.status === "skipped") {
+  if (isSkipped) {
     return createPortal(
       <Popover
         title="Heads up"
-        visibleText={skipMessage(step.skipReason, step.toolResult?.hint)}
+        visibleText={skipMessage(skipReason, step.toolResult?.hint)}
         anchorRect={null}
         variant="notice"
+        onContinue={() => dispatch({ type: "NEXT_STEP" })}
+        onStop={() => dispatch({ type: "STOP_WALKTHROUGH" })}
       />,
       document.body,
     );
@@ -58,8 +62,6 @@ export function WalkthroughOverlay() {
 
   const popover = step.popover;
 
-  // Live mode: body grows via patches — render what's arrived in the store.
-  // History mode: simulate typewriter effect via offset-driven slice.
   const visibleText = popover
     ? state.playMode === "live"
       ? popover.body

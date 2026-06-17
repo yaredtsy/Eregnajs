@@ -24,15 +24,17 @@ export function AddElementModal({ pageId, pageTitle, onClose }: Props) {
 			setErr("Label is required.");
 			return;
 		}
-		if (!domId.trim() && !cssSel.trim()) {
+		const selectors = [];
+		if (domId.trim()) selectors.push({ kind: "dom-id" as const, value: domId.trim() });
+		if (cssSel.trim()) selectors.push({ kind: "css" as const, value: cssSel.trim() });
+		if (selectors.length === 0) {
 			setErr("Provide a DOM id or CSS selector.");
 			return;
 		}
 		try {
 			await createEl.mutateAsync({
 				label: label.trim(),
-				dom_id: domId.trim() || null,
-				css_selector: cssSel.trim() || null,
+				selectors,
 				description: desc.trim() || null,
 				parent_id: null,
 			});

@@ -12,7 +12,7 @@ export interface LiveEngineHandle {
 const SKIP_DWELL_MS = 2_500;
 
 export function startLiveEngine(
-  walkthroughId: string,
+  _walkthroughId: string,
   getWt: () => WalkthroughPart | null,
   onStepStart: (stepIndex: number) => void,
   onStepDone: (stepIndex: number, result: StepPlayResult) => void,

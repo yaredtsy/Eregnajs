@@ -34,6 +34,9 @@ export interface WidgetState {
   playMode: PlayMode;
   playbackChoice: PlaybackChoice;
   planPanelOpen: boolean;
+  driftDialog: { walkthroughId: string; query: string | null } | null;
+  /** History replay: step indices that fail manifest resolve at play time. */
+  runtimeSkips: Record<number, string>;
 }
 
 export type WidgetAction =
@@ -59,7 +62,17 @@ export type WidgetAction =
     }
   | { type: "SET_CONVERSATION"; conversation: Conversation }
   | { type: "SET_PLAYBACK_CHOICE"; choice: PlaybackChoice }
-  | { type: "TOGGLE_PLAN_PANEL" };
+  | { type: "TOGGLE_PLAN_PANEL" }
+  | { type: "SHOW_DRIFT_DIALOG"; walkthroughId: string; query: string | null }
+  | { type: "CLOSE_DRIFT_DIALOG" }
+  | { type: "STOP_WALKTHROUGH" }
+  | {
+      type: "SET_RUNTIME_SKIP";
+      walkthroughId: string;
+      stepIndex: number;
+      reason: string;
+    }
+  | { type: "CLEAR_RUNTIME_SKIPS" };
 
 // ---------------------------------------------------------------------------
 // Pure helpers (no side effects)
@@ -165,6 +178,8 @@ function reducer(state: WidgetState, action: WidgetAction): WidgetState {
         status: "playing",
         mode: state.mode === "closed" ? "bubble" : state.mode,
         bubbleHasUnread: false,
+        runtimeSkips: {},
+        driftDialog: null,
       };
 
     case "SET_STATUS":
@@ -294,6 +309,40 @@ function reducer(state: WidgetState, action: WidgetAction): WidgetState {
     case "TOGGLE_PLAN_PANEL":
       return { ...state, planPanelOpen: !state.planPanelOpen };
 
+    case "SHOW_DRIFT_DIALOG":
+      return {
+        ...state,
+        driftDialog: { walkthroughId: action.walkthroughId, query: action.query },
+        status: "paused",
+      };
+
+    case "CLOSE_DRIFT_DIALOG":
+      return { ...state, driftDialog: null };
+
+    case "STOP_WALKTHROUGH":
+      return {
+        ...state,
+        activeWalkthroughId: null,
+        status: "idle",
+        stepOffsetMs: 0,
+        driftDialog: null,
+        runtimeSkips: {},
+        mode: state.mode === "detached" ? "bubble" : state.mode,
+      };
+
+    case "SET_RUNTIME_SKIP":
+      if (state.activeWalkthroughId !== action.walkthroughId) return state;
+      return {
+        ...state,
+        runtimeSkips: {
+          ...state.runtimeSkips,
+          [action.stepIndex]: action.reason,
+        },
+      };
+
+    case "CLEAR_RUNTIME_SKIPS":
+      return { ...state, runtimeSkips: {} };
+
     default:
       return state;
   }
@@ -317,9 +366,12 @@ export const WidgetContext = createContext<WidgetContextValue | null>(null);
 
 export function WidgetProvider({
   conversation,
+  initialState,
   children,
 }: {
   conversation: Conversation;
+  /** Component gallery fixtures — merge over reducer defaults. */
+  initialState?: Partial<WidgetState>;
   children: ReactNode;
 }) {
   const [state, dispatch] = useReducer(reducer, {
@@ -334,6 +386,9 @@ export function WidgetProvider({
     playMode: "history",
     playbackChoice: "live",
     planPanelOpen: false,
+    driftDialog: null,
+    runtimeSkips: {},
+    ...initialState,
   });
 
   const activeWt = getActiveWt(state);

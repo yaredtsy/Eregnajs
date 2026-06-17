@@ -1,6 +1,13 @@
 import { createServerClient } from '@repo/db/client'
 import type { Tables, TablesInsert, TablesUpdate } from '@repo/db/types'
 import { slugifyLtreeSegment } from '../lib/ltree.js'
+import {
+  legacyFromSelectors,
+  normalizeSelectors,
+  selectorsFromLegacy,
+  slugifyComponentKey,
+  type SelectorQuery,
+} from '../lib/selectors.js'
 import { pageService } from './page.service.js'
 
 type ElementRow = Tables<'elements'>
@@ -26,6 +33,34 @@ async function nextUniqueElementPath(pageId: string, basePath: string): Promise<
     candidate = `${basePath}_${suffix}`
   }
   throw new Error('Could not allocate unique element path')
+}
+
+async function nextUniqueKey(pageId: string, base: string): Promise<string> {
+  const db = createServerClient()
+  let candidate = base
+  for (let i = 0; i < 20; i += 1) {
+    const { data, error } = await db
+      .from('elements')
+      .select('id')
+      .eq('page_id', pageId)
+      .eq('key', candidate)
+      .maybeSingle()
+    if (error) throw error
+    if (!data) return candidate
+    candidate = `${base}-${i + 2}`
+  }
+  throw new Error('Could not allocate unique component key')
+}
+
+function resolveSelectors(input: {
+  selectors?: unknown
+  dom_id?: string | null
+  css_selector?: string | null
+  label: string
+}): SelectorQuery[] {
+  const fromJson = normalizeSelectors(input.selectors)
+  if (fromJson.length > 0) return fromJson
+  return selectorsFromLegacy(input.dom_id, input.css_selector, input.label)
 }
 
 async function computeElementPath(pageId: string, parentId: string | null, label: string): Promise<string> {
@@ -80,7 +115,16 @@ export const elementService = {
     userId: string,
     input: Pick<
       TablesInsert<'elements'>,
-      'page_id' | 'parent_id' | 'label' | 'dom_id' | 'css_selector' | 'description' | 'notes' | 'sort_order'
+      | 'page_id'
+      | 'parent_id'
+      | 'label'
+      | 'key'
+      | 'selectors'
+      | 'dom_id'
+      | 'css_selector'
+      | 'description'
+      | 'notes'
+      | 'sort_order'
     >,
   ): Promise<ElementApiRow> {
     const page = await pageService.getByIdForUser(userId, input.page_id)
@@ -88,6 +132,14 @@ export const elementService = {
       throw new Error('Page not found')
     }
 
+    const selectors = resolveSelectors(input)
+    if (selectors.length === 0) {
+      throw new Error('Provide at least one selector')
+    }
+
+    const legacy = legacyFromSelectors(selectors)
+    const keyBase = (input.key?.trim() || slugifyComponentKey(input.label))
+    const key = await nextUniqueKey(input.page_id, keyBase)
     const path = await computeElementPath(input.page_id, input.parent_id ?? null, input.label)
     const db = createServerClient()
 
@@ -97,8 +149,10 @@ export const elementService = {
         page_id: input.page_id,
         parent_id: input.parent_id ?? null,
         label: input.label,
-        dom_id: input.dom_id ?? null,
-        css_selector: input.css_selector ?? null,
+        key,
+        selectors,
+        dom_id: legacy.dom_id,
+        css_selector: legacy.css_selector,
         description: input.description ?? null,
         notes: input.notes ?? null,
         sort_order: input.sort_order ?? 0,
@@ -114,15 +168,34 @@ export const elementService = {
   async updateForUser(
     userId: string,
     elementId: string,
-    patch: Pick<TablesUpdate<'elements'>, 'label' | 'dom_id' | 'css_selector' | 'description' | 'notes' | 'sort_order'>,
+    patch: Pick<
+      TablesUpdate<'elements'>,
+      'label' | 'key' | 'selectors' | 'dom_id' | 'css_selector' | 'description' | 'notes' | 'sort_order'
+    >,
   ): Promise<ElementApiRow | null> {
     const existing = await this.getByIdForUser(userId, elementId)
     if (!existing) return null
 
+    const next: TablesUpdate<'elements'> = { ...patch, updated_at: new Date().toISOString() }
+
+    if (patch.selectors !== undefined || patch.dom_id !== undefined || patch.css_selector !== undefined) {
+      const selectors = resolveSelectors({
+        selectors: patch.selectors ?? existing.selectors,
+        dom_id: patch.dom_id ?? existing.dom_id,
+        css_selector: patch.css_selector ?? existing.css_selector,
+        label: patch.label ?? existing.label,
+      })
+      if (selectors.length === 0) throw new Error('Provide at least one selector')
+      const legacy = legacyFromSelectors(selectors)
+      next.selectors = selectors
+      next.dom_id = legacy.dom_id
+      next.css_selector = legacy.css_selector
+    }
+
     const db = createServerClient()
     const { data, error } = await db
       .from('elements')
-      .update({ ...patch, updated_at: new Date().toISOString() })
+      .update(next)
       .eq('id', elementId)
       .select()
       .maybeSingle()

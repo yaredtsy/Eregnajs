@@ -64,7 +64,13 @@ export function PlanPanel({ wt }: Props) {
       )}
 
       <ol className="eregna-plan-panel__chapters">
-        {wt.chapters.map((chapter, i) => (
+        {wt.chapters.map((chapter, i) => {
+          const start = chapter.stepIndex >= 0 ? chapter.stepIndex : wt.steps.length;
+          const next = wt.chapters[i + 1];
+          const end = next && next.stepIndex >= 0 ? next.stepIndex : wt.steps.length;
+          const chapterSteps = wt.steps.slice(start, end);
+
+          return (
           <li
             key={i}
             className={`eregna-plan-panel__chapter ${
@@ -80,9 +86,33 @@ export function PlanPanel({ wt }: Props) {
               {(byChapter.get(i) ?? []).map((t) => (
                 <ThoughtLine key={t.id} thought={t} />
               ))}
+              {chapterSteps.length > 0 ? (
+                <ul className="eregna-plan-panel__steps">
+                  {chapterSteps.map((step, si) => {
+                    const globalIdx = start + si;
+                    const skipped =
+                      step.status === "skipped" || Boolean(state.runtimeSkips[globalIdx]);
+                    return (
+                      <li
+                        key={step.id}
+                        className={
+                          skipped ? "eregna-plan-panel__step--skipped" : undefined
+                        }
+                      >
+                        {skipped ? "⚠ " : ""}
+                        Step {si + 1}
+                        {step.skipReason || state.runtimeSkips[globalIdx]
+                          ? ` — ${(step.skipReason ?? state.runtimeSkips[globalIdx] ?? "").split(":").slice(1).join(":") || "skipped"}`
+                          : ""}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
             </span>
           </li>
-        ))}
+          );
+        })}
       </ol>
     </div>
   );

@@ -125,6 +125,13 @@ function AgentEmbedPage() {
 						Agent settings &amp; prompt →
 					</Link>
 					<Link
+						to="/dashboard/$agentId/components"
+						params={{ agentId }}
+						className="block text-blue-400 hover:underline"
+					>
+						Components (player UI states) →
+					</Link>
+					<Link
 						to="/dashboard/$agentId/knowledge"
 						params={{ agentId }}
 						className="block text-blue-400 hover:underline"

@@ -9,25 +9,37 @@ const listQuery = z.object({
   pageId: z.string().uuid(),
 })
 
+const selectorQuery = z.object({
+  kind: z.enum(['dom-id', 'css', 'text']),
+  value: z.string().min(1).max(500),
+  tag: z.string().max(50).optional(),
+})
+
 const createBody = z
   .object({
     page_id: z.string().uuid(),
     parent_id: z.string().uuid().nullable().optional(),
     label: z.string().min(1).max(200),
+    key: z.string().min(1).max(80).regex(/^[a-z0-9][a-z0-9.-]*$/).optional(),
+    selectors: z.array(selectorQuery).max(10).optional(),
     dom_id: z.string().max(500).optional().nullable(),
     css_selector: z.string().max(500).optional().nullable(),
     description: z.string().max(8000).optional().nullable(),
     notes: z.string().max(8000).optional().nullable(),
     sort_order: z.number().int().optional(),
   })
-  .refine((b) => !!(b.dom_id?.trim() || b.css_selector?.trim()), {
-    message: 'Provide dom_id or css_selector',
-    path: ['dom_id'],
-  })
+  .refine(
+    (b) =>
+      (b.selectors?.length ?? 0) > 0 ||
+      !!(b.dom_id?.trim() || b.css_selector?.trim()),
+    { message: 'Provide selectors or dom_id/css_selector', path: ['selectors'] },
+  )
 
 const patchBody = z
   .object({
     label: z.string().min(1).max(200).optional(),
+    key: z.string().min(1).max(80).regex(/^[a-z0-9][a-z0-9.-]*$/).optional(),
+    selectors: z.array(selectorQuery).max(10).optional(),
     dom_id: z.string().max(500).optional().nullable(),
     css_selector: z.string().max(500).optional().nullable(),
     description: z.string().max(8000).optional().nullable(),

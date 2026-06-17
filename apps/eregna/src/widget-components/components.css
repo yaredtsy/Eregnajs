@@ -1,0 +1,191 @@
+/* In-flow positioning for story previews (production widget uses fixed layers). */
+.eregna-components-stage {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(160deg, #12121f 0%, #0a0a14 100%);
+  padding: 24px 16px 16px;
+  overflow: hidden;
+}
+
+.eregna-components-stage__label {
+  margin: 0 0 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.eregna-components-stage__canvas {
+  position: relative;
+  width: 100%;
+}
+
+.eregna-components-root {
+  position: relative;
+  isolation: isolate;
+}
+
+.eregna-components-root .eregna-widget-root {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.eregna-components-root .eregna-detached-player {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  pointer-events: auto;
+}
+
+.eregna-components-root .eregna-chat-popup {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  pointer-events: auto;
+}
+
+.eregna-components-root .eregna-ticker {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  margin-bottom: 8px;
+  width: 100%;
+  max-width: 640px;
+}
+
+.eregna-components-root .eregna-plan-panel {
+  position: relative;
+  bottom: auto;
+  margin-bottom: 8px;
+}
+
+.eregna-components-popover-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.eregna-components-popover-item {
+  flex: 0 1 300px;
+}
+
+/* ── Components chrome (dashboard shell) ───────────────────────────────────── */
+.eregna-component-gallery {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 0;
+  min-height: 70vh;
+  border: 1px solid var(--eregna-g-border, rgba(255, 255, 255, 0.08));
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--eregna-g-bg, #0c0c14);
+}
+
+@media (max-width: 768px) {
+  .eregna-component-gallery {
+    grid-template-columns: 1fr;
+  }
+}
+
+.eregna-component-gallery__nav {
+  border-right: 1px solid var(--eregna-g-border, rgba(255, 255, 255, 0.08));
+  padding: 12px 0;
+  overflow-y: auto;
+  max-height: 80vh;
+}
+
+.eregna-component-gallery__nav-title {
+  margin: 0 16px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.eregna-component-gallery__section-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.eregna-component-gallery__section-btn:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.eregna-component-gallery__section-btn--active {
+  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.12);
+  border-right: 2px solid #6366f1;
+}
+
+.eregna-component-gallery__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.eregna-component-gallery__variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--eregna-g-border, rgba(255, 255, 255, 0.08));
+}
+
+.eregna-component-gallery__variant-btn {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.eregna-component-gallery__variant-btn--active {
+  border-color: #6366f1;
+  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.eregna-component-gallery__preview {
+  padding: 20px 16px 24px;
+  flex: 1;
+  overflow: auto;
+}
+
+.eregna-component-gallery__meta {
+  padding: 0 16px 16px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.eregna-component-gallery__meta strong {
+  color: #94a3b8;
+  font-weight: 600;
+}
