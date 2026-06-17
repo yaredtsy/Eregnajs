@@ -95,6 +95,44 @@ export type Database = {
           },
         ]
       }
+      site_facts: {
+        Row: {
+          id: string
+          agent_id: string
+          title: string
+          content: string
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          agent_id: string
+          title: string
+          content: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          agent_id?: string
+          title?: string
+          content?: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_facts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pages: {
         Row: {
           id: string
@@ -162,6 +200,8 @@ export type Database = {
           description: string | null
           notes: string | null
           embedding: string | null
+          key: string
+          selectors: Json
           sort_order: number
           created_at: string
           updated_at: string
@@ -178,6 +218,8 @@ export type Database = {
           description?: string | null
           notes?: string | null
           embedding?: string | null
+          key?: string
+          selectors?: Json
           sort_order?: number
           created_at?: string
           updated_at?: string
@@ -194,6 +236,8 @@ export type Database = {
           description?: string | null
           notes?: string | null
           embedding?: string | null
+          key?: string
+          selectors?: Json
           sort_order?: number
           created_at?: string
           updated_at?: string

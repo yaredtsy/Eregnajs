@@ -1,5 +1,5 @@
 import type { WalkthroughPart } from "../types/conversation";
-import { playStep } from "./playStep.js";
+import { playStep, type StepPlayResult } from "./playStep.js";
 import { waitForStep } from "./waitLiveAdvance.js";
 import { clearHighlight } from "./actions/highlight.js";
 
@@ -7,11 +7,15 @@ export interface LiveEngineHandle {
   stop(): void;
 }
 
+// Skipped steps dwell briefly so the notice card is readable before the
+// walkthrough moves on (docs/v2/4-client/03 §3).
+const SKIP_DWELL_MS = 2_500;
+
 export function startLiveEngine(
   walkthroughId: string,
   getWt: () => WalkthroughPart | null,
   onStepStart: (stepIndex: number) => void,
-  onStepDone: (stepIndex: number) => void,
+  onStepDone: (stepIndex: number, result: StepPlayResult) => void,
 ): LiveEngineHandle {
   let stopped = false;
 
@@ -26,8 +30,11 @@ export function startLiveEngine(
       if (!step) break;
 
       onStepStart(stepIndex);
-      await playStep(step);
-      onStepDone(stepIndex);
+      const result = await playStep(step);
+      onStepDone(stepIndex, result);
+      if (result.status === "skipped" && !stopped) {
+        await new Promise((r) => setTimeout(r, SKIP_DWELL_MS));
+      }
 
       const nextWt = getWt();
       if (!nextWt || stepIndex >= nextWt.steps.length - 1) {

@@ -1,11 +1,12 @@
 import type { AgentContext, ChapterContext, ElementRow } from "./types.js";
+import { elementKey } from "./util/elementKey.js";
 
-// Builds a focused view for one chapter given its target elementId (dom_id).
+// Builds a focused view for one chapter given its target component key.
 // Returns the target element, its direct siblings, and all ancestors.
-export function focusChapter(ctx: AgentContext, elementDomId: string): ChapterContext {
+export function focusChapter(ctx: AgentContext, targetKey: string): ChapterContext {
   const elements = ctx.elements;
 
-  const target = elements.find((e) => e.dom_id === elementDomId) ?? null;
+  const target = elements.find((e) => elementKey(e) === targetKey) ?? null;
 
   if (!target) {
     return { targetElement: null, siblingElements: [], parentElements: [] };

@@ -4,15 +4,17 @@ const HIGHLIGHT_CLASS = "eregna-engine-highlight";
 
 let lastHighlighted: Element | null = null;
 
-export async function highlight(elementId: string): Promise<void> {
+// Returns false when the target never resolved — the step skips (not-found path).
+export async function highlight(elementId: string): Promise<boolean> {
   if (lastHighlighted) {
     lastHighlighted.classList.remove(HIGHLIGHT_CLASS);
     lastHighlighted = null;
   }
   const el = await resolveElementWithRetry(elementId);
-  if (!el) return;
+  if (!el) return false;
   el.classList.add(HIGHLIGHT_CLASS);
   lastHighlighted = el;
+  return true;
 }
 
 export function clearHighlight(): void {

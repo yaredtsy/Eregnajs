@@ -22,8 +22,15 @@ export function useLiveEngine() {
       () => activeWtRef.current,
       (stepIndex) =>
         dispatch({ type: "SET_STEP_STATUS", walkthroughId, stepIndex, status: "running" }),
-      (stepIndex) =>
-        dispatch({ type: "SET_STEP_STATUS", walkthroughId, stepIndex, status: "done" }),
+      (stepIndex, result) =>
+        dispatch({
+          type: "SET_STEP_STATUS",
+          walkthroughId,
+          stepIndex,
+          status: result.status === "done" ? "done" : "skipped",
+          skipReason: result.status === "skipped" ? result.reason : undefined,
+          toolResult: result.toolResult,
+        }),
     );
 
     return () => handle.stop();

@@ -16,7 +16,9 @@ const agentLimiter = createRateLimiter({ capacity: 30, refillPerMinute: 30 });
 const ipLimiter = createRateLimiter({ capacity: 6, refillPerMinute: 6 });
 
 const HOST_STATE_MAX_BYTES = 16 * 1024;
+const HOST_KNOWLEDGE_MAX_BYTES = 32 * 1024;
 const MAX_TOOLS = 20;
+const MAX_KNOWLEDGE_ENTRIES = 20;
 
 const RunBodySchema = z.object({
   agentPublicId: z.string().min(1).max(80),
@@ -38,6 +40,19 @@ const RunBodySchema = z.object({
     )
     .max(MAX_TOOLS)
     .optional(),
+  hostKnowledge: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(120),
+        content: z.string().min(1).max(4000),
+      }),
+    )
+    .max(MAX_KNOWLEDGE_ENTRIES)
+    .optional()
+    .refine(
+      (k) => k === undefined || JSON.stringify(k).length <= HOST_KNOWLEDGE_MAX_BYTES,
+      { message: `hostKnowledge exceeds ${HOST_KNOWLEDGE_MAX_BYTES} bytes` },
+    ),
   visitorId: z.string().max(64).optional(),
 });
 
@@ -109,6 +124,7 @@ publicRouter.post(
       query: body.query,
       hostState: body.hostState,
       hostTools: body.hostTools,
+      hostKnowledge: body.hostKnowledge,
       visitorId: body.visitorId,
       signal: controller.signal,
       onFrame: (frame) => stream.writeFrame(frame),

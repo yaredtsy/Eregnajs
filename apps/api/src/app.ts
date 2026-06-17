@@ -7,6 +7,7 @@ import { agentRouter } from './routes/agent.js'
 import { elementsRouter } from './routes/elements.js'
 import { pagesRouter } from './routes/pages.js'
 import { sessionsRouter } from './routes/sessions.js'
+import { factsRouter } from './routes/facts.js'
 import { publicRouter } from './routes/public.js'
 
 export const app = new Hono()
@@ -43,6 +44,7 @@ v1.route('/agent', agentRouter)
 v1.route('/pages', pagesRouter)
 v1.route('/elements', elementsRouter)
 v1.route('/sessions', sessionsRouter)
+v1.route('/facts', factsRouter)
 
 app.route('/v1', v1)
 app.route('/public', publicRouter)

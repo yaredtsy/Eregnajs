@@ -1,5 +1,5 @@
 import { createServerClient } from "@repo/db/client";
-import type { AgentContext } from "./types.js";
+import type { AgentContext, KnowledgeEntry } from "./types.js";
 import { matchUrl } from "./util/matchUrl.js";
 
 export interface ComposeContextOpts {
@@ -7,6 +7,7 @@ export interface ComposeContextOpts {
   pageUrl: string;
   hostState: Record<string, unknown>;
   hostTools: Array<{ name: string; description: string; parameters?: Record<string, unknown> }>;
+  hostKnowledge?: Array<{ title: string; content: string }>;
 }
 
 export async function composeContext(opts: ComposeContextOpts): Promise<AgentContext> {
@@ -47,12 +48,38 @@ export async function composeContext(opts: ComposeContextOpts): Promise<AgentCon
         ).data ?? []
       : [];
 
+  // 4. Agent-wide site facts. Tolerant of a database that predates the
+  // knowledge_v2 migration (missing table → empty list, never a dead run).
+  let siteFacts: KnowledgeEntry[] = [];
+  try {
+    const { data: facts } = await db
+      .from("site_facts")
+      .select("title, content, sort_order")
+      .eq("agent_id", agent.id)
+      .order("sort_order");
+    siteFacts = (facts ?? []).map((f) => ({
+      title: f.title,
+      content: f.content,
+      source: "dashboard" as const,
+    }));
+  } catch {
+    siteFacts = [];
+  }
+
+  const hostKnowledge: KnowledgeEntry[] = (opts.hostKnowledge ?? []).map((k) => ({
+    title: k.title,
+    content: k.content,
+    source: "page" as const,
+  }));
+
   return {
     agent,
     page,
     elements,
+    siteFacts,
     hostState: opts.hostState,
     hostTools: opts.hostTools,
+    hostKnowledge,
     conversationHistory: "",  // MVP: fresh session each call
   };
 }

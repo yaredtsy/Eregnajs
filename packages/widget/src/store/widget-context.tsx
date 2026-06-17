@@ -12,6 +12,7 @@ import type {
   PlaybackSpeed,
   PatchFrame,
   StepStatus,
+  StepToolResult,
 } from "../types/conversation";
 import { computeStepDuration, applyPatchFrame } from "../types/conversation";
 
@@ -48,7 +49,14 @@ export type WidgetAction =
   | { type: "MARK_READ" }
   | { type: "APPLY_PATCH"; frame: PatchFrame }
   | { type: "SET_PLAY_MODE"; playMode: PlayMode }
-  | { type: "SET_STEP_STATUS"; walkthroughId: string; stepIndex: number; status: StepStatus }
+  | {
+      type: "SET_STEP_STATUS";
+      walkthroughId: string;
+      stepIndex: number;
+      status: StepStatus;
+      skipReason?: string;
+      toolResult?: StepToolResult;
+    }
   | { type: "SET_CONVERSATION"; conversation: Conversation }
   | { type: "SET_PLAYBACK_CHOICE"; choice: PlaybackChoice }
   | { type: "TOGGLE_PLAN_PANEL" };
@@ -262,7 +270,14 @@ function reducer(state: WidgetState, action: WidgetAction): WidgetState {
           return {
             ...part,
             steps: part.steps.map((s, i) =>
-              i === action.stepIndex ? { ...s, status: action.status } : s,
+              i === action.stepIndex
+                ? {
+                    ...s,
+                    status: action.status,
+                    ...(action.skipReason !== undefined ? { skipReason: action.skipReason } : {}),
+                    ...(action.toolResult !== undefined ? { toolResult: action.toolResult } : {}),
+                  }
+                : s,
             ),
           };
         }),

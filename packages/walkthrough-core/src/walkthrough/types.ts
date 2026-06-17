@@ -21,12 +21,23 @@ export type WalkthroughChapter = {
   status?: ChapterStatus;
 };
 
+// Outcome of a call-tool action, recorded by the engine. Three consumers,
+// one shape: the popover result card, run telemetry, and (later) the
+// tool-result round-trip (docs/v2 flows/01 §5).
+export type StepToolResult = {
+  name: string;
+  status: "ok" | "error";
+  summary: string;   // ≤300 chars, display-ready
+  hint?: string;     // visitor-facing fix, from the tool's structured error
+};
+
 export type WalkthroughStep = {
   id: string;
   actions: WalkthroughAction[];
   popover?: PopoverConfig;
   status: StepStatus;
   skipReason?: string;
+  toolResult?: StepToolResult;
 };
 
 export type WalkthroughPosition = {

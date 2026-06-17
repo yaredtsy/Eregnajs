@@ -63,14 +63,36 @@ different capability sets. The prompts are rebuilt every run; nothing is cached 
 
 ## 4. Validation, both ends (fix #5)
 
-| Where | Checks |
-|---|---|
-| Route (Zod) | descriptor shape; name `[a-z0-9_-]{1,40}`; unique names; param schema is the supported subset |
-| Server, post-Stepper | tool exists; args validate against `parameters` (required present, types match, enums respected); on fail → self-repair retry → drop action + `skipReason` |
-| Engine, pre-execution | tool still registered (page may have changed since `ask`); `api` URL still same-origin; 10s execution timeout |
+| Where | Checks | Mechanism |
+|---|---|---|
+| Route (Zod) | descriptor shape; name `[a-z0-9_-]{1,40}`; unique names; param schema is the supported subset | logic |
+| Server, post-Stepper | tool exists; args validate against the declared `parameters` JSON-Schema (required present, types match, enums respected); on fail → self-repair retry → drop action + `skipReason` | logic guarding intelligence |
+| Engine, pre-execution | tool still registered (page may have changed since `ask`); custom `validate` hook (below); `api` URL still same-origin; 10s execution timeout | logic + customer's own rules |
 
 Trust nothing across either gap: the model can hallucinate invocations; the page can mutate
 between request and playback.
+
+### 4.1 Customer-side validators (Zod & friends)
+
+Schemas and functions don't serialize, so rich validation lives where `run()` lives — on
+the page. `ToolSpec` accepts an optional `validate`:
+
+```ts
+validate?: StandardSchemaV1 | ((args) => true | string)
+```
+
+- **Standard Schema** (the `~standard` interop spec) means Zod 3.24+, Valibot and ArkType
+  schemas drop in directly: `validate: z.object({ column: z.enum(["total"]) })`.
+- A plain function returning `true` or an error message covers everything else —
+  including *state-dependent* rules a schema can't express ("no row is selected yet").
+- The engine runs `validate` before `run()`; a failure becomes
+  `skipReason: "invalid-args:<tool>"` with the message as the notice hint — it feeds the
+  guided-recovery path (`flows/02`), never a crash.
+
+Division of labor: the wire's JSON-Schema is the *model-facing* contract (the LLM reads
+it to construct args; the server enforces it); `validate` is the *page-facing* last line
+(the customer's own invariants, checked at execution time). Intelligence proposes, logic
+disposes — twice.
 
 ## 5. The result round-trip (designed now, built Phase 5)
 

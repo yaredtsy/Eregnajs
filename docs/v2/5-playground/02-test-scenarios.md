@@ -11,6 +11,8 @@
 | Component | Registered as | Hostile property | Exercises |
 |---|---|---|---|
 | Hero section | `home.hero` | none (control) | happy path: scroll, highlight, narrate |
+| Orders table | `orders.table` | answers live inside the component | read-tools (`table_summary`, `table_sum_column`) → result cards; hostState as the pre-calculated alternative ([flow 01](./flows/01-table-tools.md)) |
+| Export button | `orders.export-btn` | disabled until a row is selected; tool throws `{code, hint}` | guided precondition recovery, planned vs reactive ([flow 02](./flows/02-guided-recovery.md)) |
 | Long-scroll section | `home.details` | 3 viewports down | scroll-into-view + settle |
 | Tabs (3 tabs) | `tabs.panel-b` | content hidden until tab active | `isUsable` check, `switchTab` tool → reveal, retry ladder |
 | Dialog | `dialog.upgrade-cta` | only exists after `openPricingDialog` tool runs | tool → MutationObserver branch of the ladder |
@@ -29,6 +31,7 @@
 | E1 | happy 3-chapter run, live | segments grow → fill; ticker thoughts; popovers stream; complete |
 | E2 | same run, play-on-demand | buffer; "Ready ▶"; typewriter playback; seekable |
 | E3 | replay from dashboard | identical to E2 from snapshot |
+| E3b | replay on a drifted page | chapter-1 pre-flight fails → drift dialog: regenerate (plain `ask()`) or stop ([flow 04](./flows/04-replay-drift.md)) |
 | E4 | vanishing banner targeted | notice card, step red slice, auto-continue 2.5s |
 | E5 | ghost component chapter | whole chapter skips as unit, one notice, segment red |
 | E6 | wait-for-click ignored 30s | auto-skip + thought + continue |
@@ -38,6 +41,7 @@
 ### Tools
 | # | Scenario | Expected |
 |---|---|---|
+| T0 | read-tool result card (`table_sum_column`) | result rendered in popover footer; never re-executed on replay (flows 01, 03 A-C10) |
 | T1 | dialog flow (tool reveals target) | `call-tool` → ladder catches dialog → highlight inside it |
 | T2 | tool throws | step skipped `tool-error`, red slice, run continues |
 | T3 | tool 3s latency | engine waits (≤10s), no double-fire |

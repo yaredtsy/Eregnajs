@@ -5,12 +5,15 @@ interface Props {
   title?: string;
   visibleText: string;
   anchorRect: DOMRect | null;
+  footer?: string;            // tool result card (docs/v2 flows/01 §5)
+  variant?: "default" | "notice";
 }
 
-export function Popover({ title, visibleText, anchorRect }: Props) {
+export function Popover({ title, visibleText, anchorRect, footer, variant = "default" }: Props) {
   const style = anchorRect
     ? computePosition(anchorRect)
     : { position: "fixed" as const, top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
+  const isNotice = variant === "notice";
 
   return (
     <div
@@ -20,7 +23,7 @@ export function Popover({ title, visibleText, anchorRect }: Props) {
         pointerEvents: "none",
         width: POPOVER_WIDTH,
         background: "#1e1e2e",
-        border: "1px solid rgba(99,102,241,0.4)",
+        border: isNotice ? "1px solid rgba(244,63,94,0.5)" : "1px solid rgba(99,102,241,0.4)",
         borderRadius: 12,
         padding: "12px 14px",
         boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
@@ -46,18 +49,35 @@ export function Popover({ title, visibleText, anchorRect }: Props) {
       )}
       <p style={{ margin: 0 }}>
         {visibleText}
-        <span
-          style={{
-            display: "inline-block",
-            width: 2,
-            height: "0.85em",
-            background: "#a5b4fc",
-            marginLeft: 2,
-            verticalAlign: "middle",
-            animation: "eregna-blink 1s step-end infinite",
-          }}
-        />
+        {!isNotice && (
+          <span
+            style={{
+              display: "inline-block",
+              width: 2,
+              height: "0.85em",
+              background: "#a5b4fc",
+              marginLeft: 2,
+              verticalAlign: "middle",
+              animation: "eregna-blink 1s step-end infinite",
+            }}
+          />
+        )}
       </p>
+      {footer && (
+        <p
+          style={{
+            margin: "8px 0 0",
+            paddingTop: 8,
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+            fontFamily: "ui-monospace, monospace",
+            fontSize: 11,
+            color: "#7c85c0",
+            overflowWrap: "anywhere",
+          }}
+        >
+          {footer}
+        </p>
+      )}
     </div>
   );
 }

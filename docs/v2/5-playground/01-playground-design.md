@@ -4,6 +4,10 @@
 > real widget embedded, plus control panels to inject context and run any pipeline piece in
 > isolation. It is simultaneously: your dev environment, the integration test suite, the customer's
 > sandbox, and the place where context engineering becomes *visible*.
+>
+> The hardest interaction conditions each get a dedicated flow file with flowcharts in
+> [`flows/`](./flows/00-overview.md): table read-tools, guided precondition recovery,
+> awaited-vs-precalculated paths, and replay drift.
 
 ---
 

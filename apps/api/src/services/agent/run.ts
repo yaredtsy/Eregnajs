@@ -14,6 +14,7 @@ export interface RunOpts {
   query: string;
   hostState?: Record<string, unknown>;
   hostTools?: Array<{ name: string; description: string; parameters?: Record<string, unknown> }>;
+  hostKnowledge?: Array<{ title: string; content: string }>;
   visitorId?: string;
   signal?: AbortSignal;
   onFrame: (frame: RunFrame) => Promise<void>;
@@ -47,6 +48,7 @@ export async function runAgent(opts: RunOpts): Promise<void> {
       pageUrl: opts.pageUrl,
       hostState: opts.hostState ?? {},
       hostTools: opts.hostTools ?? [],
+      hostKnowledge: opts.hostKnowledge ?? [],
     });
 
     const graph = buildGraph();

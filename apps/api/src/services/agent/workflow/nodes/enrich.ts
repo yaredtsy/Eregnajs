@@ -1,11 +1,13 @@
 import { nanoid } from "nanoid";
 import type { GraphState } from "../graph.js";
 import * as h from "../../patcher/helpers.js";
+import { buildManifest } from "../../context/util/elementKey.js";
 
 // Sets up the conversation mirror with the user message, assistant message,
-// and an empty walkthrough part. Emits two frames.
+// and an empty walkthrough part carrying the element manifest — the engine
+// needs key→selector addressing before any LLM output arrives.
 export async function enrichNode(state: GraphState): Promise<Partial<GraphState>> {
-  const { patcher, query } = state;
+  const { patcher, query, ctx } = state;
   const conv = patcher.conversation;
 
   h.addUserMessage(conv, nanoid(10), query);
@@ -18,7 +20,8 @@ export async function enrichNode(state: GraphState): Promise<Partial<GraphState>
   const assistantMsgIndex = conv.messages.length - 1;
 
   const wtId = nanoid(10);
-  const wtPartIdx = h.addWalkthroughPart(conv, assistantMsgIndex, wtId, "");
+  const manifest = buildManifest(ctx.elements);
+  const wtPartIdx = h.addWalkthroughPart(conv, assistantMsgIndex, wtId, "", undefined, manifest);
   await patcher.emit();
 
   return { assistantMsgIndex, walkthroughPartIndex: wtPartIdx };

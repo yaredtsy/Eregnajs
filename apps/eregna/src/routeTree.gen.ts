@@ -19,9 +19,9 @@ import { Route as DashboardAgentIdRouteRouteImport } from './routes/dashboard/$a
 import { Route as DashboardAgentIdIndexRouteImport } from './routes/dashboard/$agentId/index'
 import { Route as DashboardAgentIdSitemapRouteImport } from './routes/dashboard/$agentId.sitemap'
 import { Route as DashboardAgentIdSettingsRouteImport } from './routes/dashboard/$agentId.settings'
+import { Route as DashboardAgentIdSessionsRouteImport } from './routes/dashboard/$agentId.sessions'
 import { Route as DashboardAgentIdKnowledgeIndexRouteImport } from './routes/dashboard/$agentId.knowledge.index'
 import { Route as DashboardAgentIdKnowledgePageIdRouteImport } from './routes/dashboard/$agentId.knowledge.$pageId'
-import { Route as DashboardAgentIdSessionsRouteImport } from './routes/dashboard/$agentId.sessions'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -74,6 +74,12 @@ const DashboardAgentIdSettingsRoute =
     path: '/settings',
     getParentRoute: () => DashboardAgentIdRouteRoute,
   } as any)
+const DashboardAgentIdSessionsRoute =
+  DashboardAgentIdSessionsRouteImport.update({
+    id: '/sessions',
+    path: '/sessions',
+    getParentRoute: () => DashboardAgentIdRouteRoute,
+  } as any)
 const DashboardAgentIdKnowledgeIndexRoute =
   DashboardAgentIdKnowledgeIndexRouteImport.update({
     id: '/knowledge/',
@@ -86,12 +92,6 @@ const DashboardAgentIdKnowledgePageIdRoute =
     path: '/knowledge/$pageId',
     getParentRoute: () => DashboardAgentIdRouteRoute,
   } as any)
-const DashboardAgentIdSessionsRoute =
-  DashboardAgentIdSessionsRouteImport.update({
-    id: '/sessions',
-    path: '/sessions',
-    getParentRoute: () => DashboardAgentIdRouteRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,12 +101,12 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
   '/dashboard/$agentId/settings': typeof DashboardAgentIdSettingsRoute
   '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
   '/dashboard/$agentId/': typeof DashboardAgentIdIndexRoute
   '/dashboard/$agentId/knowledge/$pageId': typeof DashboardAgentIdKnowledgePageIdRoute
   '/dashboard/$agentId/knowledge/': typeof DashboardAgentIdKnowledgeIndexRoute
-  '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -114,12 +114,12 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
   '/dashboard/$agentId/settings': typeof DashboardAgentIdSettingsRoute
   '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
   '/dashboard/$agentId': typeof DashboardAgentIdIndexRoute
   '/dashboard/$agentId/knowledge/$pageId': typeof DashboardAgentIdKnowledgePageIdRoute
   '/dashboard/$agentId/knowledge': typeof DashboardAgentIdKnowledgeIndexRoute
-  '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -130,12 +130,12 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
   '/dashboard/$agentId/settings': typeof DashboardAgentIdSettingsRoute
   '/dashboard/$agentId/sitemap': typeof DashboardAgentIdSitemapRoute
   '/dashboard/$agentId/': typeof DashboardAgentIdIndexRoute
   '/dashboard/$agentId/knowledge/$pageId': typeof DashboardAgentIdKnowledgePageIdRoute
   '/dashboard/$agentId/knowledge/': typeof DashboardAgentIdKnowledgeIndexRoute
-  '/dashboard/$agentId/sessions': typeof DashboardAgentIdSessionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -147,12 +147,12 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/callback'
     | '/dashboard/'
+    | '/dashboard/$agentId/sessions'
     | '/dashboard/$agentId/settings'
     | '/dashboard/$agentId/sitemap'
     | '/dashboard/$agentId/'
     | '/dashboard/$agentId/knowledge/$pageId'
     | '/dashboard/$agentId/knowledge/'
-    | '/dashboard/$agentId/sessions'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -160,12 +160,12 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/callback'
     | '/dashboard'
+    | '/dashboard/$agentId/sessions'
     | '/dashboard/$agentId/settings'
     | '/dashboard/$agentId/sitemap'
     | '/dashboard/$agentId'
     | '/dashboard/$agentId/knowledge/$pageId'
     | '/dashboard/$agentId/knowledge'
-    | '/dashboard/$agentId/sessions'
   id:
     | '__root__'
     | '/'
@@ -175,12 +175,12 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/callback'
     | '/dashboard/'
+    | '/dashboard/$agentId/sessions'
     | '/dashboard/$agentId/settings'
     | '/dashboard/$agentId/sitemap'
     | '/dashboard/$agentId/'
     | '/dashboard/$agentId/knowledge/$pageId'
     | '/dashboard/$agentId/knowledge/'
-    | '/dashboard/$agentId/sessions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -263,6 +263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAgentIdSettingsRouteImport
       parentRoute: typeof DashboardAgentIdRouteRoute
     }
+    '/dashboard/$agentId/sessions': {
+      id: '/dashboard/$agentId/sessions'
+      path: '/sessions'
+      fullPath: '/dashboard/$agentId/sessions'
+      preLoaderRoute: typeof DashboardAgentIdSessionsRouteImport
+      parentRoute: typeof DashboardAgentIdRouteRoute
+    }
     '/dashboard/$agentId/knowledge/': {
       id: '/dashboard/$agentId/knowledge/'
       path: '/knowledge'
@@ -277,32 +284,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAgentIdKnowledgePageIdRouteImport
       parentRoute: typeof DashboardAgentIdRouteRoute
     }
-    '/dashboard/$agentId/sessions': {
-      id: '/dashboard/$agentId/sessions'
-      path: '/sessions'
-      fullPath: '/dashboard/$agentId/sessions'
-      preLoaderRoute: typeof DashboardAgentIdSessionsRouteImport
-      parentRoute: typeof DashboardAgentIdRouteRoute
-    }
   }
 }
 
 interface DashboardAgentIdRouteRouteChildren {
+  DashboardAgentIdSessionsRoute: typeof DashboardAgentIdSessionsRoute
   DashboardAgentIdSettingsRoute: typeof DashboardAgentIdSettingsRoute
   DashboardAgentIdSitemapRoute: typeof DashboardAgentIdSitemapRoute
   DashboardAgentIdIndexRoute: typeof DashboardAgentIdIndexRoute
   DashboardAgentIdKnowledgePageIdRoute: typeof DashboardAgentIdKnowledgePageIdRoute
   DashboardAgentIdKnowledgeIndexRoute: typeof DashboardAgentIdKnowledgeIndexRoute
-  DashboardAgentIdSessionsRoute: typeof DashboardAgentIdSessionsRoute
 }
 
 const DashboardAgentIdRouteRouteChildren: DashboardAgentIdRouteRouteChildren = {
+  DashboardAgentIdSessionsRoute: DashboardAgentIdSessionsRoute,
   DashboardAgentIdSettingsRoute: DashboardAgentIdSettingsRoute,
   DashboardAgentIdSitemapRoute: DashboardAgentIdSitemapRoute,
   DashboardAgentIdIndexRoute: DashboardAgentIdIndexRoute,
   DashboardAgentIdKnowledgePageIdRoute: DashboardAgentIdKnowledgePageIdRoute,
   DashboardAgentIdKnowledgeIndexRoute: DashboardAgentIdKnowledgeIndexRoute,
-  DashboardAgentIdSessionsRoute: DashboardAgentIdSessionsRoute,
 }
 
 const DashboardAgentIdRouteRouteWithChildren =

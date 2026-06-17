@@ -1,11 +1,11 @@
 import type { PromptSection } from "../types.js";
 import type { ElementRow } from "../../context/types.js";
+import { elementKey } from "../../context/util/elementKey.js";
 
 function renderElement(el: ElementRow, indent: number): string {
   const pad = "  ".repeat(indent);
-  const id = el.dom_id ? ` [id="${el.dom_id}"]` : "";
   const desc = el.description ? ` — ${el.description}` : "";
-  return `${pad}- ${el.label}${id}${desc}`;
+  return `${pad}- ${el.label} [key="${elementKey(el)}"]${desc}`;
 }
 
 function renderTree(elements: ElementRow[], parentId: string | null, indent: number): string {
@@ -25,7 +25,7 @@ export const elementsTreeSection: PromptSection = {
     const tree = renderTree(ctx.elements, null, 0);
     return `
 ## Registered Elements (element tree)
-Use the element id values exactly as shown when referencing elements.
+Reference elements by their key, exactly as shown. Never invent a key.
 ${tree}
 `.trim();
   },

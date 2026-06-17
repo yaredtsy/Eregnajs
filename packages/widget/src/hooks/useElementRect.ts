@@ -1,18 +1,19 @@
 import { useState, useEffect, useRef } from "react";
+import { resolveKey } from "../engine/selectors.js";
 
-export function useElementRect(elementId: string | null) {
+export function useElementRect(elementKey: string | null) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!elementId) {
+    if (!elementKey) {
       setRect(null);
       return;
     }
 
     function update() {
-      const el = document.getElementById(elementId!);
-      setRect(el ? el.getBoundingClientRect() : null);
+      const hit = resolveKey(elementKey!);
+      setRect(hit ? hit.element.getBoundingClientRect() : null);
       rafRef.current = requestAnimationFrame(update);
     }
 
@@ -20,7 +21,7 @@ export function useElementRect(elementId: string | null) {
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [elementId]);
+  }, [elementKey]);
 
   return rect;
 }

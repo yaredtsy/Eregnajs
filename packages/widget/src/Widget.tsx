@@ -12,6 +12,7 @@ import { BubbleFAB } from "./components/BubbleFAB";
 import { ChatPopup } from "./components/ChatPopup";
 import { DetachedPlayer } from "./components/DetachedPlayer";
 import { WalkthroughOverlay } from "./components/WalkthroughOverlay";
+import { setActiveManifest } from "./engine/selectors.js";
 import { mountReady } from "./embed/host-api.impl.js";
 import { getVisitorId } from "./embed/visitorId.js";
 import { runStream } from "./agent/runStream.js";
@@ -22,10 +23,17 @@ interface WidgetInnerProps {
 }
 
 function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
-  const { state } = useWidget();
+  const { state, activeWt } = useWidget();
   const dispatch = useWidgetDispatch();
   usePlayer();
   useLiveEngine();
+
+  // Keep the engine's key→selector map pointed at the playing walkthrough.
+  const manifest = activeWt?.manifest ?? null;
+  useEffect(() => {
+    setActiveManifest(manifest);
+    return () => setActiveManifest(null);
+  }, [manifest]);
 
   // Ref that always holds the latest callback values.
   // Written every render — before any effect or event fires — so the

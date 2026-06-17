@@ -6,12 +6,14 @@ import { pageContextSection } from "./sections/pageContext.js";
 import { elementsTreeSection } from "./sections/elementsTree.js";
 import { hostStateSection } from "./sections/hostStateBlock.js";
 import { hostToolsSection } from "./sections/hostToolsBlock.js";
+import { knowledgeSection } from "./sections/knowledgeBlock.js";
 
 const DEFAULT_SECTIONS: PromptSection[] = [
   rulesSection,
   customerOverlaySection,
   pageContextSection,
   elementsTreeSection,
+  knowledgeSection,
   hostStateSection,
   hostToolsSection,
 ];

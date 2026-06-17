@@ -12,6 +12,7 @@ export type {
   StepStatus,
   ChapterStatus,
   PopoverConfig,
+  StepToolResult,
   WalkthroughChapter,
   WalkthroughStep,
   WalkthroughPosition,

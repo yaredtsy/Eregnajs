@@ -1,5 +1,6 @@
 import { setState as _setState, getState } from "./hostState.js";
 import { registerTool as _registerTool, getToolDescriptors } from "./hostTools.js";
+import { debugResolve } from "../engine/selectors.js";
 import type { HostApi } from "./host-api.js";
 import type { ToolSpec } from "./hostTools.js";
 
@@ -34,6 +35,10 @@ export function createHostApi(): HostApi {
       if (!_ready) await _readyPromise;
       if (!_ask) throw new Error("Widget not mounted");
       await _ask(query, getState(), getToolDescriptors());
+    },
+
+    __debugResolve(keyOrQuery) {
+      return debugResolve(keyOrQuery);
     },
   };
 }

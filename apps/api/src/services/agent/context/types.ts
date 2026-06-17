@@ -10,12 +10,22 @@ export interface ToolDescriptor {
   parameters?: Record<string, unknown>;
 }
 
+// Free-text knowledge: dashboard "site facts" and runtime entries injected by
+// the host script. Same shape, different origin — the prompt tags the source.
+export interface KnowledgeEntry {
+  title: string;
+  content: string;
+  source: "dashboard" | "page";
+}
+
 export interface AgentContext {
   agent:     AgentRow;
   page:      PageRow | null;
   elements:  ElementRow[];
+  siteFacts: KnowledgeEntry[];
   hostState: Record<string, unknown>;
   hostTools: ToolDescriptor[];
+  hostKnowledge: KnowledgeEntry[];
   conversationHistory: string;  // pre-serialised prior messages for the prompt
 }
 

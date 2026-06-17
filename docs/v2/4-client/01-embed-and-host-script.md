@@ -25,6 +25,9 @@ interface EregnaApi {
   // context injection — all optional, all buffered pre-mount
   setState(patch: Record<string, unknown>): void
   registerTool(spec: ToolSpec): () => void              // fn or api kind (3-server/04 §2)
+  // ToolSpec.validate (optional): a Standard Schema validator (Zod 3.24+/Valibot/
+  // ArkType) or a (args) => true | string function, run client-side before run().
+  // See 3-server/04 §4.1.
   addKnowledge(entry: { id?: string; title: string; content: string }): () => void   // NEW
 
   // control
