@@ -1,17 +1,18 @@
 /**
  * Development seed: creates a test auth user (and profile via trigger), one agent,
- * a small page tree, and sample elements. Requires service-role env vars from docs/03-supabase-setup.md.
+ * a small page tree, and sample elements. Requires secret-key env vars from docs/03-supabase-setup.md.
  */
 import { randomUUID } from "node:crypto"
 import { createServerClient } from "./client.js"
+import { resolveSecretKey } from "./env.js"
 
 const DEV_EMAIL = "test@eregna.dev"
 const DEV_PASSWORD = "password123"
 
 export async function runSeed(): Promise<void> {
-  if (!process.env.EREGNA_SUPABASE_URL || !process.env.EREGNA_SUPABASE_SERVICE_ROLE_KEY) {
+  if (!process.env.EREGNA_SUPABASE_URL || !resolveSecretKey()) {
     throw new Error(
-      "Missing EREGNA_SUPABASE_URL or EREGNA_SUPABASE_SERVICE_ROLE_KEY (see docs/03-supabase-setup.md)",
+      "Missing EREGNA_SUPABASE_URL or EREGNA_SUPABASE_SECRET_KEY (see docs/03-supabase-setup.md)",
     )
   }
 

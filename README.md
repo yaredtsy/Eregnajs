@@ -20,8 +20,8 @@ pnpm install
 
 | App | File | Purpose |
 |-----|------|--------|
-| Dashboard | `apps/eregna/.env` | Supabase **anon** URL + key for the browser; optional `VITE_EREGNA_API_URL` |
-| API | `apps/api/.env` | Supabase **URL** + **service role** key (server only; never expose to the client) |
+| Dashboard | `apps/eregna/.env` | Supabase **publishable** URL + key for the browser; optional `VITE_EREGNA_API_URL` |
+| API | `apps/api/.env` | Supabase **URL** + **secret** key (server only; never expose to the client) |
 
 Copy the examples and fill in real values:
 
@@ -32,13 +32,13 @@ cp apps/api/.env.example apps/api/.env
 
 **Dashboard (`apps/eregna/.env`)**
 
-- `VITE_EREGNA_SUPABASE_URL` / `VITE_EREGNA_SUPABASE_ANON_KEY` — project URL and anon key (or the legacy `VITE_SUPABASE_*` names; both are supported in code).
+- `VITE_EREGNA_SUPABASE_URL` / `VITE_EREGNA_SUPABASE_PUBLISHABLE_KEY` — project URL and publishable key (`sb_publishable_...` from the Supabase dashboard). Legacy `VITE_*_ANON_KEY` names still work.
 - `VITE_EREGNA_API_URL` — base URL of the API (default `http://localhost:4000` if omitted).
 
 **API (`apps/api/.env`)**
 
 - `EREGNA_SUPABASE_URL` — same Supabase URL as the dashboard (e.g. `http://127.0.0.1:54321` when running Supabase locally).
-- `EREGNA_SUPABASE_SERVICE_ROLE_KEY` — service role key (from Supabase dashboard or `supabase status` when local).
+- `EREGNA_SUPABASE_SECRET_KEY` — secret key (`sb_secret_...` from the dashboard, or `service_role` when local). Legacy `EREGNA_SUPABASE_SERVICE_ROLE_KEY` still works.
 - `EREGNA_CORS_ORIGINS` — comma-separated origins allowed to call the API (include `http://localhost:3000` for local UI).
 
 In Supabase, enable **Email** (and optionally **Google**) under Authentication → Providers, and add redirect URLs such as `http://localhost:3000/auth/callback`.
@@ -94,8 +94,8 @@ Apply schema with `supabase db reset` (migrations + `supabase/seed.sql`) or `sup
 
 ## Security notes
 
-- Never put the **service role** key in any `VITE_*` variable or ship it to the browser.
-- The dashboard uses only the **anon** key; the API verifies `Authorization: Bearer <access_token>` using the service client.
+- Never put the **secret** key in any `VITE_*` variable or ship it to the browser.
+- The dashboard uses only the **publishable** key; the API verifies `Authorization: Bearer <access_token>` using the secret client.
 
 ## Further reading
 
