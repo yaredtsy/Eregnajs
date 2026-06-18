@@ -58,6 +58,15 @@ health view (`4-client/04` §4).
 
 **Demo:** the full MVP acceptance test from `1-product/03` — runable start to finish in the playground.
 
+## Phase 5.5 — Guide agent (dev dogfood, optional but small)
+
+Seed a fixed **Eregna Guide** agent + `/dashboard` page + six components; wire
+`VITE_EREGNA_GUIDE_AGENT_ID` on the agents list route so stream + player animation run together
+without the static sample. Spec: `7-guide-agent/*`. Not production.
+
+**Demo:** log in → `/dashboard` → ask "How do I create my first agent?" → live patches, spotlight
+on real DOM.
+
 ## Phase 6+ — earned upgrades (in unlock order)
 
 Tool-result round-trip (then: reactive stepper) → multi-turn history → embedding retrieval at

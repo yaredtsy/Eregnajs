@@ -31,7 +31,8 @@ Level 4  ├── 3-server/ ─────────────────
             │                                knowledge capture
             └── 5-playground/ ───────────── test harness + scenario matrix
             │
-Level 5  6-roadmap/ ────────────────────── build order + learning map
+Level 5  ├── 6-roadmap/ ────────────────────── build order + learning map
+            └── 7-guide-agent/ ──────────── dev guide agent for /dashboard (stream + UI test)
 ```
 
 ## Reading order
@@ -45,6 +46,7 @@ Level 5  6-roadmap/ ────────────────────
 | `4-client/` | embed-and-host-script, walkthrough-player, engine-and-recovery, knowledge-capture | "How does it look, play, and recover on a stranger's page?" |
 | `5-playground/` | playground-design, test-scenarios | "How do I test each piece in isolation?" |
 | `6-roadmap/` | build-order, learning-map | "What do I build next week, and what does it teach me?" |
+| `7-guide-agent/` | overview → components → prompts → seed → wiring → how-to-test | "How do I dogfood stream + animation on `/dashboard`?" |
 
 ## Conventions
 

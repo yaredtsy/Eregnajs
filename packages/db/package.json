@@ -12,7 +12,8 @@
   "scripts": {
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
-    "seed": "bun run ./src/seed-cli.ts"
+    "seed": "bun run ./src/seed-cli.ts",
+    "seed:guide": "bun --env-file=../../apps/api/.env run ./src/seed-guide-cli.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1"

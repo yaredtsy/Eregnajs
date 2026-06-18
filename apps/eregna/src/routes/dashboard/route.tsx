@@ -1,6 +1,6 @@
 import { initWidget } from "@repo/widget";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { DashboardSidebar } from "#/components/dashboard/DashboardSidebar";
 import { useAuth } from "#/lib/auth";
 
@@ -8,11 +8,27 @@ export const Route = createFileRoute("/dashboard")({
 	component: DashboardShell,
 });
 
+function isAgentsListPath(pathname: string): boolean {
+	return pathname === "/dashboard" || pathname === "/dashboard/";
+}
+
 function DashboardShell() {
 	const { user, loading } = useAuth();
 	const navigate = useNavigate();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const isPlayground = pathname.includes("/playground");
+	const isAgentsList = isAgentsListPath(pathname);
+
+	const guideAgentId = import.meta.env.VITE_EREGNA_GUIDE_AGENT_ID as string | undefined;
+	const apiBase = import.meta.env.VITE_EREGNA_API_URL ?? "http://localhost:4000";
+
+	const widgetOptions = useMemo(() => {
+		if (!isAgentsList) return null;
+		if (guideAgentId?.trim()) {
+			return { agentPublicId: guideAgentId.trim(), apiBase };
+		}
+		return {};
+	}, [isAgentsList, guideAgentId, apiBase]);
 
 	useEffect(() => {
 		if (!loading && !user) {
@@ -21,9 +37,9 @@ function DashboardShell() {
 	}, [user, loading, navigate]);
 
 	useEffect(() => {
-		if (loading || !user || isPlayground) return;
-		return initWidget().unmount;
-	}, [loading, user, isPlayground]);
+		if (loading || !user || isPlayground || !widgetOptions) return;
+		return initWidget(widgetOptions).unmount;
+	}, [loading, user, isPlayground, widgetOptions]);
 
 	if (loading || !user) {
 		return (

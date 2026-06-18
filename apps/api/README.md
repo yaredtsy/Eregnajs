@@ -17,12 +17,17 @@ pnpm install
 ## Run
 
 ```sh
-# from repo root
+# from repo root (hot reload — updates routes without restarting the process)
 pnpm dev:api
 
 # or from apps/api
 pnpm dev
+
+# full process restart on every save (if --hot misbehaves)
+pnpm dev:watch
 ```
+
+`dev` uses `bun --hot`: save any file under `src/` (or a workspace import like `@repo/db`) and the fetch handler reloads. You should see `API listening on…` log again in the terminal.
 
 Default URL: `http://localhost:4000` — `GET /health` should return `{ ok: true }`.
 

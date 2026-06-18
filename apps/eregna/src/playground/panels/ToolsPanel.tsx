@@ -1,4 +1,8 @@
-import type { ToolCallLogEntry, ToolConfig, ToolFailureMode } from "../registerPlaygroundTools";
+import type {
+  ToolCallLogEntry,
+  ToolConfig,
+  ToolFailureMode,
+} from "../registerPlaygroundTools";
 
 const LATENCIES = [0, 500, 3000] as const;
 const FAILURES: ToolFailureMode[] = ["off", "throw", "timeout"];
@@ -12,17 +16,17 @@ export function ToolsPanel({
   onChange: (name: string, patch: Partial<ToolConfig>) => void;
   callLog: ToolCallLogEntry[];
 }) {
+  console.log("Objects ", configs);
   return (
     <div className="flex flex-col gap-3 text-xs">
       <p className="text-muted-foreground">
-        Tools register through <code className="text-foreground">eregna.registerTool</code> — same public API as production embeds.
+        Tools register through{" "}
+        <code className="text-foreground">eregna.registerTool</code> — same
+        public API as production embeds.
       </p>
       <div className="space-y-2">
         {Object.entries(configs).map(([name, cfg]) => (
-          <div
-            key={name}
-            className="rounded border border-border p-2"
-          >
+          <div key={name} className="rounded border border-border p-2">
             <label className="flex items-center gap-2 font-medium text-foreground">
               <input
                 type="checkbox"
@@ -37,7 +41,9 @@ export function ToolsPanel({
                 <select
                   className="rounded border border-border bg-background px-1 py-0.5"
                   value={cfg.latencyMs}
-                  onChange={(e) => onChange(name, { latencyMs: Number(e.target.value) })}
+                  onChange={(e) =>
+                    onChange(name, { latencyMs: Number(e.target.value) })
+                  }
                 >
                   {LATENCIES.map((ms) => (
                     <option key={ms} value={ms}>
@@ -51,7 +57,11 @@ export function ToolsPanel({
                 <select
                   className="rounded border border-border bg-background px-1 py-0.5"
                   value={cfg.failure}
-                  onChange={(e) => onChange(name, { failure: e.target.value as ToolFailureMode })}
+                  onChange={(e) =>
+                    onChange(name, {
+                      failure: e.target.value as ToolFailureMode,
+                    })
+                  }
                 >
                   {FAILURES.map((f) => (
                     <option key={f} value={f}>
@@ -74,8 +84,15 @@ export function ToolsPanel({
               .slice()
               .reverse()
               .map((e) => (
-                <div key={`${e.ts}-${e.name}`} className="mb-1 border-b border-border/50 pb-1">
-                  <span className={e.status === "ok" ? "text-emerald-400" : "text-red-400"}>
+                <div
+                  key={`${e.ts}-${e.name}`}
+                  className="mb-1 border-b border-border/50 pb-1"
+                >
+                  <span
+                    className={
+                      e.status === "ok" ? "text-emerald-400" : "text-red-400"
+                    }
+                  >
                     {e.status}
                   </span>{" "}
                   {e.name} {JSON.stringify(e.args)} → {e.summary}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { SAMPLE_CONVERSATION } from "./data/sample-conversation";
+import { createEmptyConversation } from "./data/empty-conversation";
 import {
   WidgetProvider,
   useWidget,
@@ -181,8 +182,12 @@ export function WidgetRoot({ apiBase, agentPublicId }: WidgetRootProps) {
   const resolvedApiBase =
     apiBase ?? (typeof window !== "undefined" ? window.location.origin : "");
 
+  const initialConversation = agentPublicId
+    ? createEmptyConversation("Eregna Guide")
+    : SAMPLE_CONVERSATION;
+
   return (
-    <WidgetProvider conversation={SAMPLE_CONVERSATION}>
+    <WidgetProvider conversation={initialConversation}>
       <WidgetInner apiBase={resolvedApiBase} agentPublicId={agentPublicId ?? ""} />
     </WidgetProvider>
   );
