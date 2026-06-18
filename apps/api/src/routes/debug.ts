@@ -1,4 +1,4 @@
-import { zValidator } from "@hono/zod-validator";
+import { describeRoute, validator } from "hono-openapi";
 import { Hono } from "hono";
 import { z } from "zod";
 import { agentService } from "../services/agent.service.js";
@@ -56,7 +56,7 @@ export const debugRouter = new Hono();
 
 debugRouter.post(
   "/context",
-  zValidator("json", DebugBaseSchema),
+  validator("json", DebugBaseSchema),
   async (c) => {
     const userId = c.get("userId");
     const body = c.req.valid("json");
@@ -87,7 +87,7 @@ debugRouter.post(
 
 debugRouter.post(
   "/plan",
-  zValidator("json", DebugBaseSchema),
+  validator("json", DebugBaseSchema),
   async (c) => {
     const userId = c.get("userId");
     const body = c.req.valid("json");
@@ -123,7 +123,7 @@ const DebugStepSchema = DebugBaseSchema.extend({
 
 debugRouter.post(
   "/step",
-  zValidator("json", DebugStepSchema),
+  validator("json", DebugStepSchema),
   async (c) => {
     const userId = c.get("userId");
     const body = c.req.valid("json");
@@ -185,7 +185,7 @@ const DebugNarrateSchema = DebugBaseSchema.extend({
 
 debugRouter.post(
   "/narrate",
-  zValidator("json", DebugNarrateSchema),
+  validator("json", DebugNarrateSchema),
   async (c) => {
     const userId = c.get("userId");
     const body = c.req.valid("json");

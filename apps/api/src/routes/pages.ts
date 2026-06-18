@@ -1,13 +1,18 @@
-import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
+import { describeRoute, validator } from 'hono-openapi'
 import { z } from 'zod'
-import { jsonError } from '../lib/http.js'
+import {
+  AgentIdQuerySchema,
+  bearerSecurity,
+  IdParamSchema,
+  jsonCreated,
+  jsonError,
+  jsonOk,
+  noContent,
+} from '../lib/openapi.js'
+import { jsonError as respondError } from '../lib/http.js'
 import { agentService } from '../services/agent.service.js'
 import { pageService } from '../services/page.service.js'
-
-const listQuery = z.object({
-  agentId: z.string().uuid(),
-})
 
 const createBody = z.object({
   agent_id: z.string().uuid(),
@@ -29,42 +34,95 @@ const patchBody = z
 
 export const pagesRouter = new Hono()
 
-pagesRouter.get('/', zValidator('query', listQuery), async (c) => {
-  const userId = c.get('userId')
-  const { agentId } = c.req.valid('query')
-  if (!(await agentService.assertOwnedByUser(userId, agentId))) {
-    return jsonError(c, 404, 'Not found')
-  }
-  const data = await pageService.listForAgent(agentId)
-  return c.json({ data })
-})
+pagesRouter.get(
+  '/',
+  describeRoute({
+    tags: ['Pages'],
+    security: bearerSecurity,
+    responses: {
+      ...jsonOk('List pages'),
+      ...jsonError(401, 'Unauthorized'),
+      ...jsonError(404, 'Not found'),
+    },
+  }),
+  validator('query', AgentIdQuerySchema),
+  async (c) => {
+    const userId = c.get('userId')
+    const { agentId } = c.req.valid('query')
+    if (!(await agentService.assertOwnedByUser(userId, agentId))) {
+      return respondError(c, 404, 'Not found')
+    }
+    const data = await pageService.listForAgent(agentId)
+    return c.json({ data })
+  },
+)
 
-pagesRouter.post('/', zValidator('json', createBody), async (c) => {
-  const userId = c.get('userId')
-  const body = c.req.valid('json')
-  try {
-    const data = await pageService.create(userId, body)
-    return c.json({ data }, 201)
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Create failed'
-    if (msg === 'Agent not found') return jsonError(c, 404, 'Not found')
-    throw e
-  }
-})
+pagesRouter.post(
+  '/',
+  describeRoute({
+    tags: ['Pages'],
+    security: bearerSecurity,
+    responses: {
+      ...jsonCreated(),
+      ...jsonError(401, 'Unauthorized'),
+      ...jsonError(404, 'Not found'),
+    },
+  }),
+  validator('json', createBody),
+  async (c) => {
+    const userId = c.get('userId')
+    const body = c.req.valid('json')
+    try {
+      const data = await pageService.create(userId, body)
+      return c.json({ data }, 201)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Create failed'
+      if (msg === 'Agent not found') return respondError(c, 404, 'Not found')
+      throw e
+    }
+  },
+)
 
-pagesRouter.patch('/:id', zValidator('json', patchBody), async (c) => {
-  const userId = c.get('userId')
-  const id = c.req.param('id')
-  const body = c.req.valid('json')
-  const data = await pageService.updateForUser(userId, id, body)
-  if (!data) return jsonError(c, 404, 'Not found')
-  return c.json({ data })
-})
+pagesRouter.patch(
+  '/:id',
+  describeRoute({
+    tags: ['Pages'],
+    security: bearerSecurity,
+    responses: {
+      ...jsonOk('Update page'),
+      ...jsonError(401, 'Unauthorized'),
+      ...jsonError(404, 'Not found'),
+    },
+  }),
+  validator('param', IdParamSchema),
+  validator('json', patchBody),
+  async (c) => {
+    const userId = c.get('userId')
+    const { id } = c.req.valid('param')
+    const body = c.req.valid('json')
+    const data = await pageService.updateForUser(userId, id, body)
+    if (!data) return respondError(c, 404, 'Not found')
+    return c.json({ data })
+  },
+)
 
-pagesRouter.delete('/:id', async (c) => {
-  const userId = c.get('userId')
-  const id = c.req.param('id')
-  const ok = await pageService.deleteForUser(userId, id)
-  if (!ok) return jsonError(c, 404, 'Not found')
-  return c.body(null, 204)
-})
+pagesRouter.delete(
+  '/:id',
+  describeRoute({
+    tags: ['Pages'],
+    security: bearerSecurity,
+    responses: {
+      ...noContent('Delete page'),
+      ...jsonError(401, 'Unauthorized'),
+      ...jsonError(404, 'Not found'),
+    },
+  }),
+  validator('param', IdParamSchema),
+  async (c) => {
+    const userId = c.get('userId')
+    const { id } = c.req.valid('param')
+    const ok = await pageService.deleteForUser(userId, id)
+    if (!ok) return respondError(c, 404, 'Not found')
+    return c.body(null, 204)
+  },
+)

@@ -1,10 +1,17 @@
-import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
-import { createNdjsonStream } from "../services/agent/transport/ndjson.js";
-import { runAgent } from "../services/agent/run.js";
-import * as runs from "../services/agent/runs/index.js";
-import { debugRouter } from "./debug.js";
+import { Hono } from 'hono'
+import { describeRoute, validator } from 'hono-openapi'
+import { z } from 'zod'
+import {
+  bearerSecurity,
+  IdParamSchema,
+  jsonError,
+  jsonOk,
+  ndjsonOk,
+} from '../lib/openapi.js'
+import { createNdjsonStream } from '../services/agent/transport/ndjson.js'
+import { runAgent } from '../services/agent/run.js'
+import * as runs from '../services/agent/runs/index.js'
+import { debugRouter } from './debug.js'
 
 const RunBodySchema = z.object({
   agentPublicId: z.string(),
@@ -21,24 +28,33 @@ const RunBodySchema = z.object({
     )
     .optional(),
   visitorId: z.string().optional(),
-});
+})
 
-export const agentRouter = new Hono();
+const RunsQuerySchema = z.object({
+  agentId: z.string().uuid(),
+  limit: z.coerce.number().int().optional(),
+  offset: z.coerce.number().int().optional(),
+})
 
-agentRouter.route("/debug", debugRouter);
+export const agentRouter = new Hono()
+
+agentRouter.route('/debug', debugRouter)
 
 agentRouter.post(
-  "/run",
-  zValidator("json", RunBodySchema),
+  '/run',
+  describeRoute({
+    tags: ['Agent runs'],
+    security: bearerSecurity,
+    responses: ndjsonOk,
+  }),
+  validator('json', RunBodySchema),
   async (c) => {
-    const body = c.req.valid("json");
-    const stream = createNdjsonStream(c);
-    const controller = new AbortController();
+    const body = c.req.valid('json')
+    const stream = createNdjsonStream(c)
+    const controller = new AbortController()
 
-    // Detect client disconnect and abort the run.
-    c.req.raw.signal?.addEventListener("abort", () => controller.abort());
+    c.req.raw.signal?.addEventListener('abort', () => controller.abort())
 
-    // Run is fire-and-stream: hold the connection open while the graph runs.
     void runAgent({
       agentPublicId: body.agentPublicId,
       pageUrl: body.pageUrl,
@@ -50,27 +66,42 @@ agentRouter.post(
       onFrame: (frame) => stream.writeFrame(frame),
     })
       .catch((err) => {
-        if (!(err as Error)?.message?.includes("AbortError")) {
-          console.error("[agent] run error", err);
+        if (!(err as Error)?.message?.includes('AbortError')) {
+          console.error('[agent] run error', err)
         }
       })
-      .finally(() => stream.close());
+      .finally(() => stream.close())
 
-    return stream.response;
+    return stream.response
   },
-);
+)
 
-agentRouter.get("/runs/:id", async (c) => {
-  const id = c.req.param("id");
-  const row = runs.load(id, c.get("userId"));
-  if (!row) return c.json({ error: "not found" }, 404);
-  return c.json({ data: row });
-});
+agentRouter.get(
+  '/runs',
+  describeRoute({
+    tags: ['Agent runs'],
+    security: bearerSecurity,
+    responses: { ...jsonOk('List runs'), ...jsonError(400, 'agentId required') },
+  }),
+  validator('query', RunsQuerySchema),
+  async (c) => {
+    const { agentId, limit = 50, offset = 0 } = c.req.valid('query')
+    return c.json({ data: runs.listByAgent(agentId, c.get('userId'), limit, offset) })
+  },
+)
 
-agentRouter.get("/runs", async (c) => {
-  const agentId = c.req.query("agentId");
-  if (!agentId) return c.json({ error: "agentId required" }, 400);
-  const limit = Number(c.req.query("limit") ?? 50);
-  const offset = Number(c.req.query("offset") ?? 0);
-  return c.json({ data: runs.listByAgent(agentId, c.get("userId"), limit, offset) });
-});
+agentRouter.get(
+  '/runs/:id',
+  describeRoute({
+    tags: ['Agent runs'],
+    security: bearerSecurity,
+    responses: { ...jsonOk('Get run'), ...jsonError(404, 'Not found') },
+  }),
+  validator('param', IdParamSchema),
+  async (c) => {
+    const { id } = c.req.valid('param')
+    const row = runs.load(id, c.get('userId'))
+    if (!row) return c.json({ error: 'not found' }, 404)
+    return c.json({ data: row })
+  },
+)

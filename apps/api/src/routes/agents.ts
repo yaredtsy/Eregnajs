@@ -1,7 +1,15 @@
-import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
+import { describeRoute, validator } from 'hono-openapi'
 import { z } from 'zod'
-import { jsonError } from '../lib/http.js'
+import {
+  bearerSecurity,
+  IdParamSchema,
+  jsonCreated,
+  jsonError,
+  jsonOk,
+  noContent,
+} from '../lib/openapi.js'
+import { jsonError as respondError } from '../lib/http.js'
 import { agentService } from '../services/agent.service.js'
 
 const createBody = z.object({
@@ -25,40 +33,97 @@ const patchBody = z
 
 export const agentsRouter = new Hono()
 
-agentsRouter.get('/', async (c) => {
-  const userId = c.get('userId')
-  const data = await agentService.listForUser(userId)
-  return c.json({ data })
-})
+agentsRouter.get(
+  '/',
+  describeRoute({
+    tags: ['Agents'],
+    security: bearerSecurity,
+    responses: { ...jsonOk('List agents'), ...jsonError(401, 'Unauthorized') },
+  }),
+  async (c) => {
+    const userId = c.get('userId')
+    const data = await agentService.listForUser(userId)
+    return c.json({ data })
+  },
+)
 
-agentsRouter.post('/', zValidator('json', createBody), async (c) => {
-  const userId = c.get('userId')
-  const body = c.req.valid('json')
-  const data = await agentService.create(userId, body)
-  return c.json({ data: { ...data, page_count: 0 } }, 201)
-})
+agentsRouter.post(
+  '/',
+  describeRoute({
+    tags: ['Agents'],
+    security: bearerSecurity,
+    responses: { ...jsonCreated(), ...jsonError(401, 'Unauthorized') },
+  }),
+  validator('json', createBody),
+  async (c) => {
+    const userId = c.get('userId')
+    const body = c.req.valid('json')
+    const data = await agentService.create(userId, body)
+    return c.json({ data: { ...data, page_count: 0 } }, 201)
+  },
+)
 
-agentsRouter.get('/:id', async (c) => {
-  const userId = c.get('userId')
-  const id = c.req.param('id')
-  const data = await agentService.getByIdForUserWithPageCount(userId, id)
-  if (!data) return jsonError(c, 404, 'Not found')
-  return c.json({ data })
-})
+agentsRouter.get(
+  '/:id',
+  describeRoute({
+    tags: ['Agents'],
+    security: bearerSecurity,
+    responses: {
+      ...jsonOk('Get agent'),
+      ...jsonError(401, 'Unauthorized'),
+      ...jsonError(404, 'Not found'),
+    },
+  }),
+  validator('param', IdParamSchema),
+  async (c) => {
+    const userId = c.get('userId')
+    const { id } = c.req.valid('param')
+    const data = await agentService.getByIdForUserWithPageCount(userId, id)
+    if (!data) return respondError(c, 404, 'Not found')
+    return c.json({ data })
+  },
+)
 
-agentsRouter.patch('/:id', zValidator('json', patchBody), async (c) => {
-  const userId = c.get('userId')
-  const id = c.req.param('id')
-  const body = c.req.valid('json')
-  const data = await agentService.updateForUser(userId, id, body)
-  if (!data) return jsonError(c, 404, 'Not found')
-  return c.json({ data })
-})
+agentsRouter.patch(
+  '/:id',
+  describeRoute({
+    tags: ['Agents'],
+    security: bearerSecurity,
+    responses: {
+      ...jsonOk('Update agent'),
+      ...jsonError(401, 'Unauthorized'),
+      ...jsonError(404, 'Not found'),
+    },
+  }),
+  validator('param', IdParamSchema),
+  validator('json', patchBody),
+  async (c) => {
+    const userId = c.get('userId')
+    const { id } = c.req.valid('param')
+    const body = c.req.valid('json')
+    const data = await agentService.updateForUser(userId, id, body)
+    if (!data) return respondError(c, 404, 'Not found')
+    return c.json({ data })
+  },
+)
 
-agentsRouter.delete('/:id', async (c) => {
-  const userId = c.get('userId')
-  const id = c.req.param('id')
-  const ok = await agentService.deleteForUser(userId, id)
-  if (!ok) return jsonError(c, 404, 'Not found')
-  return c.body(null, 204)
-})
+agentsRouter.delete(
+  '/:id',
+  describeRoute({
+    tags: ['Agents'],
+    security: bearerSecurity,
+    responses: {
+      ...noContent('Delete agent'),
+      ...jsonError(401, 'Unauthorized'),
+      ...jsonError(404, 'Not found'),
+    },
+  }),
+  validator('param', IdParamSchema),
+  async (c) => {
+    const userId = c.get('userId')
+    const { id } = c.req.valid('param')
+    const ok = await agentService.deleteForUser(userId, id)
+    if (!ok) return respondError(c, 404, 'Not found')
+    return c.body(null, 204)
+  },
+)

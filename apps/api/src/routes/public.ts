@@ -1,5 +1,5 @@
 import { Hono, type Context } from "hono";
-import { zValidator } from "@hono/zod-validator";
+import { describeRoute, validator } from "hono-openapi";
 import { getConnInfo } from "hono/bun";
 import { z } from "zod";
 import { createServerClient } from "@repo/db/client";
@@ -7,6 +7,7 @@ import { createNdjsonStream } from "../services/agent/transport/ndjson.js";
 import { runAgent } from "../services/agent/run.js";
 import { matchOrigin } from "../lib/matchOrigin.js";
 import { createRateLimiter } from "../lib/rateLimit.js";
+import { jsonError, ndjsonOk } from "../lib/openapi.js";
 
 // The visitor-facing surface (docs/v2/3-server/06 §2). No JWT — admission is
 // public_id + per-agent origin allowlist + rate limits, all checked before
@@ -70,7 +71,16 @@ export const publicRouter = new Hono();
 
 publicRouter.post(
   "/agent/run",
-  zValidator("json", RunBodySchema),
+  describeRoute({
+    tags: ["Public"],
+    responses: {
+      ...ndjsonOk,
+      ...jsonError(403, "Origin not allowed"),
+      ...jsonError(404, "Agent not found"),
+      ...jsonError(429, "Rate limit exceeded"),
+    },
+  }),
+  validator("json", RunBodySchema),
   async (c) => {
     const body = c.req.valid("json");
     const db = createServerClient();

@@ -1,13 +1,18 @@
-import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
+import { describeRoute, validator } from 'hono-openapi'
 import { z } from 'zod'
-import { jsonError } from '../lib/http.js'
+import {
+  bearerSecurity,
+  IdParamSchema,
+  jsonCreated,
+  jsonError,
+  jsonOk,
+  noContent,
+  PageIdQuerySchema,
+} from '../lib/openapi.js'
+import { jsonError as respondError } from '../lib/http.js'
 import { elementService } from '../services/element.service.js'
 import { pageService } from '../services/page.service.js'
-
-const listQuery = z.object({
-  pageId: z.string().uuid(),
-})
 
 const selectorQuery = z.object({
   kind: z.enum(['dom-id', 'css', 'text']),
@@ -30,8 +35,7 @@ const createBody = z
   })
   .refine(
     (b) =>
-      (b.selectors?.length ?? 0) > 0 ||
-      !!(b.dom_id?.trim() || b.css_selector?.trim()),
+      (b.selectors?.length ?? 0) > 0 || !!(b.dom_id?.trim() || b.css_selector?.trim()),
     { message: 'Provide selectors or dom_id/css_selector', path: ['selectors'] },
   )
 
@@ -50,41 +54,94 @@ const patchBody = z
 
 export const elementsRouter = new Hono()
 
-elementsRouter.get('/', zValidator('query', listQuery), async (c) => {
-  const userId = c.get('userId')
-  const { pageId } = c.req.valid('query')
-  const page = await pageService.getByIdForUser(userId, pageId)
-  if (!page) return jsonError(c, 404, 'Not found')
-  const data = await elementService.listForPage(pageId)
-  return c.json({ data })
-})
+elementsRouter.get(
+  '/',
+  describeRoute({
+    tags: ['Elements'],
+    security: bearerSecurity,
+    responses: {
+      ...jsonOk('List elements'),
+      ...jsonError(401, 'Unauthorized'),
+      ...jsonError(404, 'Not found'),
+    },
+  }),
+  validator('query', PageIdQuerySchema),
+  async (c) => {
+    const userId = c.get('userId')
+    const { pageId } = c.req.valid('query')
+    const page = await pageService.getByIdForUser(userId, pageId)
+    if (!page) return respondError(c, 404, 'Not found')
+    const data = await elementService.listForPage(pageId)
+    return c.json({ data })
+  },
+)
 
-elementsRouter.post('/', zValidator('json', createBody), async (c) => {
-  const userId = c.get('userId')
-  const body = c.req.valid('json')
-  try {
-    const data = await elementService.create(userId, body)
-    return c.json({ data }, 201)
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Create failed'
-    if (msg === 'Page not found') return jsonError(c, 404, 'Not found')
-    throw e
-  }
-})
+elementsRouter.post(
+  '/',
+  describeRoute({
+    tags: ['Elements'],
+    security: bearerSecurity,
+    responses: {
+      ...jsonCreated(),
+      ...jsonError(401, 'Unauthorized'),
+      ...jsonError(404, 'Not found'),
+    },
+  }),
+  validator('json', createBody),
+  async (c) => {
+    const userId = c.get('userId')
+    const body = c.req.valid('json')
+    try {
+      const data = await elementService.create(userId, body)
+      return c.json({ data }, 201)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Create failed'
+      if (msg === 'Page not found') return respondError(c, 404, 'Not found')
+      throw e
+    }
+  },
+)
 
-elementsRouter.patch('/:id', zValidator('json', patchBody), async (c) => {
-  const userId = c.get('userId')
-  const id = c.req.param('id')
-  const body = c.req.valid('json')
-  const data = await elementService.updateForUser(userId, id, body)
-  if (!data) return jsonError(c, 404, 'Not found')
-  return c.json({ data })
-})
+elementsRouter.patch(
+  '/:id',
+  describeRoute({
+    tags: ['Elements'],
+    security: bearerSecurity,
+    responses: {
+      ...jsonOk('Update element'),
+      ...jsonError(401, 'Unauthorized'),
+      ...jsonError(404, 'Not found'),
+    },
+  }),
+  validator('param', IdParamSchema),
+  validator('json', patchBody),
+  async (c) => {
+    const userId = c.get('userId')
+    const { id } = c.req.valid('param')
+    const body = c.req.valid('json')
+    const data = await elementService.updateForUser(userId, id, body)
+    if (!data) return respondError(c, 404, 'Not found')
+    return c.json({ data })
+  },
+)
 
-elementsRouter.delete('/:id', async (c) => {
-  const userId = c.get('userId')
-  const id = c.req.param('id')
-  const ok = await elementService.deleteForUser(userId, id)
-  if (!ok) return jsonError(c, 404, 'Not found')
-  return c.body(null, 204)
-})
+elementsRouter.delete(
+  '/:id',
+  describeRoute({
+    tags: ['Elements'],
+    security: bearerSecurity,
+    responses: {
+      ...noContent('Delete element'),
+      ...jsonError(401, 'Unauthorized'),
+      ...jsonError(404, 'Not found'),
+    },
+  }),
+  validator('param', IdParamSchema),
+  async (c) => {
+    const userId = c.get('userId')
+    const { id } = c.req.valid('param')
+    const ok = await elementService.deleteForUser(userId, id)
+    if (!ok) return respondError(c, 404, 'Not found')
+    return c.body(null, 204)
+  },
+)
