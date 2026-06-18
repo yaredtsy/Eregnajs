@@ -55,7 +55,7 @@
   bottom: 84px;
   right: 20px;
   width: min(calc(100vw - 40px), 360px);
-  max-height: min(calc(100vh - 120px), 560px);
+  height: min(calc(100vh - 120px), 560px);
   display: flex;
   flex-direction: column;
   background: #13131f;
@@ -104,6 +104,7 @@
 
 .eregna-chat-popup__body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 12px;
   scrollbar-width: thin;
@@ -273,6 +274,7 @@
   padding: 8px 12px;
   border-top: 1px solid rgba(255,255,255,0.07);
   background: #0e0e1c;
+  flex-shrink: 0;
 }
 
 .eregna-player-bar .eregna-composer {

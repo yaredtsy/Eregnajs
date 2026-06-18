@@ -5,7 +5,6 @@ import {
   WidgetProvider,
   useWidget,
   useWidgetDispatch,
-  findStreamingWalkthrough,
 } from "./store/widget-context";
 import { usePlayer } from "./hooks/usePlayer";
 import { useLiveEngine } from "./hooks/useLiveEngine";
@@ -129,21 +128,6 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
 
   // Abort any in-flight stream on unmount. Single cleanup-only effect.
   useEffect(() => () => { controllerRef.current?.abort(); }, []);
-
-  // Auto-detach once per walkthrough: when one activates for playback, or a
-  // live run starts streaming (the ticker is the only planning feedback).
-  // The ref makes it once-per-id so a user-closed bar stays closed.
-  const streamingWt =
-    state.playMode === "live" ? findStreamingWalkthrough(state.conversation) : null;
-  const detachKey =
-    state.activeWalkthroughId ??
-    (streamingWt ? `pending:${streamingWt.walkthroughId}` : null);
-  const lastDetachKeyRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!detachKey || lastDetachKeyRef.current === detachKey) return;
-    lastDetachKeyRef.current = detachKey;
-    dispatch({ type: "SET_MODE", mode: "detached" });
-  }, [detachKey]); // dispatch is stable by React contract — omitted
 
   const drift = state.driftDialog;
 

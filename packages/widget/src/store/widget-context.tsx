@@ -240,35 +240,8 @@ function reducer(state: WidgetState, action: WidgetAction): WidgetState {
 
     case "APPLY_PATCH": {
       const newConv = applyPatchFrame(state.conversation, action.frame);
-      if (state.playMode !== "live" || state.activeWalkthroughId) {
-        return { ...state, conversation: newConv };
-      }
-
-      // Watching live: activate the first walkthrough that starts playing.
-      if (state.playbackChoice === "live") {
-        const wt = findWalkthroughByStatus(newConv, "playing");
-        if (wt) {
-          return { ...state, conversation: newConv, activeWalkthroughId: wt.walkthroughId };
-        }
-        return { ...state, conversation: newConv };
-      }
-
-      // Play on demand: buffer until the run completes, then hand the finished
-      // document to the history player, paused on a ready-to-play bar.
-      // Errored runs activate too — the partial walkthrough is still viewable.
-      const completed =
-        findWalkthroughByStatus(newConv, "complete") ??
-        findWalkthroughByStatus(newConv, "error");
-      if (completed) {
-        return {
-          ...state,
-          conversation: newConv,
-          activeWalkthroughId: completed.walkthroughId,
-          playMode: "history",
-          status: "paused",
-          stepOffsetMs: 0,
-        };
-      }
+      // Sidebar chat first: don't auto-activate walkthroughs while patches stream in.
+      // Re-enable live/on-demand activation when walkthrough playback is wired up.
       return { ...state, conversation: newConv };
     }
 
