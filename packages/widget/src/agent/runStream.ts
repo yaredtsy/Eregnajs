@@ -1,10 +1,11 @@
-import type { RunFrame } from "../types/conversation";
+import type { RunFrame, Conversation } from "../types/conversation";
 
 export interface RunStreamOptions {
   apiBase: string;
   agentPublicId: string;
   pageUrl: string;
   query: string;
+  conversation?: Conversation;
   hostState?: Record<string, unknown>;
   hostTools?: Array<{ name: string; description: string; parameters?: Record<string, unknown> }>;
   hostKnowledge?: Array<{ title: string; content: string }>;
@@ -55,6 +56,7 @@ export async function runStream(opts: RunStreamOptions): Promise<void> {
         agentPublicId: opts.agentPublicId,
         pageUrl: opts.pageUrl,
         query: opts.query,
+        conversation: opts.conversation,
         hostState: opts.hostState,
         hostTools: opts.hostTools,
         hostKnowledge: opts.hostKnowledge,

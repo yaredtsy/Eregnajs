@@ -10,6 +10,9 @@ import {
 } from '../lib/openapi.js'
 import { createNdjsonStream } from '../services/agent/transport/ndjson.js'
 import { runAgent } from '../services/agent/run.js'
+import { ConversationSchema } from '../lib/conversationSchema.js'
+import type { Conversation } from '@repo/walkthrough-core'
+import { isAbortError } from '../lib/abort.js'
 import * as runs from '../services/agent/runs/index.js'
 import { debugRouter } from './debug.js'
 
@@ -28,6 +31,7 @@ const RunBodySchema = z.object({
     )
     .optional(),
   visitorId: z.string().optional(),
+  conversation: ConversationSchema.optional(),
 })
 
 const RunsQuerySchema = z.object({
@@ -62,11 +66,12 @@ agentRouter.post(
       hostState: body.hostState,
       hostTools: body.hostTools,
       visitorId: body.visitorId,
+      conversation: body.conversation as Conversation | undefined,
       signal: controller.signal,
       onFrame: (frame) => stream.writeFrame(frame),
     })
       .catch((err) => {
-        if (!(err as Error)?.message?.includes('AbortError')) {
+        if (!controller.signal.aborted && !isAbortError(err)) {
           console.error('[agent] run error', err)
         }
       })

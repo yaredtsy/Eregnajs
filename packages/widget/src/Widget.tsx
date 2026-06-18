@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { SAMPLE_CONVERSATION } from "./data/sample-conversation";
 import { createEmptyConversation } from "./data/empty-conversation";
 import {
@@ -9,22 +9,15 @@ import {
 import { usePlayer } from "./hooks/usePlayer";
 import { useLiveEngine } from "./hooks/useLiveEngine";
 import { useHistoryDrift } from "./hooks/useHistoryDrift";
+import { RunSessionProvider } from "./hooks/useAgentRun";
 import { BubbleFAB } from "./components/BubbleFAB";
 import { ChatPopup } from "./components/ChatPopup";
 import { DetachedPlayer } from "./components/DetachedPlayer";
 import { WalkthroughOverlay } from "./components/WalkthroughOverlay";
 import { DriftDialog } from "./components/DriftDialog";
 import { setActiveManifest } from "./engine/selectors.js";
-import { mountReady } from "./embed/host-api.impl.js";
-import { getVisitorId } from "./embed/visitorId.js";
-import { runStream } from "./agent/runStream.js";
 
-interface WidgetInnerProps {
-  apiBase: string;
-  agentPublicId: string;
-}
-
-function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
+function WidgetInner() {
   const { state, activeWt } = useWidget();
   const dispatch = useWidgetDispatch();
   usePlayer();
@@ -38,96 +31,11 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
   );
   useHistoryDrift(handleDriftEscalation);
 
-  const askRef = useRef<((query: string) => Promise<void>) | null>(null);
   const manifest = activeWt?.manifest ?? null;
   useEffect(() => {
     setActiveManifest(manifest);
     return () => setActiveManifest(null);
   }, [manifest]);
-
-  // Ref that always holds the latest callback values.
-  // Written every render — before any effect or event fires — so the
-  // ask handler can never close over stale props.
-  const ctxRef = useRef({ dispatch, apiBase, agentPublicId });
-  ctxRef.current = { dispatch, apiBase, agentPublicId };
-
-  // Tracks the AbortController for the in-flight ask() call.
-  const controllerRef = useRef<AbortController | null>(null);
-
-  // Register the ask handler with the global singleton exactly once —
-  // done during render with a ref guard so there is no async timing gap
-  // (no waiting for the browser to flush effects).
-  const registeredRef = useRef(false);
-  if (!registeredRef.current) {
-    registeredRef.current = true;
-
-    mountReady(
-      async (query, hostState, hostTools, hostKnowledge) => {
-      const startRun = async (q: string, signal: AbortSignal) => {
-        const { apiBase: base, agentPublicId: id } = ctxRef.current;
-        await runStream({
-          apiBase: base,
-          agentPublicId: id,
-          pageUrl: window.location.href,
-          query: q,
-          hostState,
-          hostTools,
-          hostKnowledge,
-          visitorId: getVisitorId(),
-          signal,
-          onFrame: (frame) => {
-            const d2 = ctxRef.current.dispatch;
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new CustomEvent("eregna:frame", { detail: frame }));
-            }
-            if (frame.kind === "hello") {
-              d2({ type: "SET_CONVERSATION", conversation: frame.conversation });
-            } else if (frame.kind === "patch") {
-              d2({ type: "APPLY_PATCH", frame });
-            } else if (frame.kind === "end" && frame.status === "error") {
-              console.error("[eregna] run failed:", frame.message);
-            }
-          },
-        });
-      };
-
-      controllerRef.current?.abort();
-      controllerRef.current = new AbortController();
-      askRef.current = async (q) => {
-        controllerRef.current?.abort();
-        controllerRef.current = new AbortController();
-        ctxRef.current.dispatch({ type: "SET_PLAY_MODE", playMode: "live" });
-        ctxRef.current.dispatch({ type: "SET_MODE", mode: "bubble" });
-        try {
-          await startRun(q, controllerRef.current.signal);
-        } catch (err) {
-          if ((err as DOMException).name !== "AbortError") {
-            console.error("[eregna] runStream error", err);
-          }
-        }
-      };
-
-      const { dispatch: d } = ctxRef.current;
-      d({ type: "SET_PLAY_MODE", playMode: "live" });
-      d({ type: "SET_MODE", mode: "bubble" });
-
-      try {
-        await startRun(query, controllerRef.current.signal);
-      } catch (err) {
-        if ((err as DOMException).name !== "AbortError") {
-          console.error("[eregna] runStream error", err);
-        }
-      }
-    },
-      {
-        open: () => ctxRef.current.dispatch({ type: "SET_MODE", mode: "bubble" }),
-        close: () => ctxRef.current.dispatch({ type: "SET_MODE", mode: "bubble" }),
-      },
-    );
-  }
-
-  // Abort any in-flight stream on unmount. Single cleanup-only effect.
-  useEffect(() => () => { controllerRef.current?.abort(); }, []);
 
   const drift = state.driftDialog;
 
@@ -140,7 +48,11 @@ function WidgetInner({ apiBase, agentPublicId }: WidgetInnerProps) {
             dispatch({ type: "CLOSE_DRIFT_DIALOG" });
             dispatch({ type: "STOP_WALKTHROUGH" });
             const q = drift.query?.trim();
-            if (q && askRef.current) void askRef.current(q);
+            if (q) {
+              void (window as { eregna?: { ask(q: string): Promise<void> } }).eregna
+                ?.ask(q)
+                .catch((err: unknown) => console.error("[eregna] ask failed", err));
+            }
           }}
           onStop={() => {
             dispatch({ type: "CLOSE_DRIFT_DIALOG" });
@@ -172,7 +84,9 @@ export function WidgetRoot({ apiBase, agentPublicId }: WidgetRootProps) {
 
   return (
     <WidgetProvider conversation={initialConversation}>
-      <WidgetInner apiBase={resolvedApiBase} agentPublicId={agentPublicId ?? ""} />
+      <RunSessionProvider apiBase={resolvedApiBase} agentPublicId={agentPublicId ?? ""}>
+        <WidgetInner />
+      </RunSessionProvider>
     </WidgetProvider>
   );
 }

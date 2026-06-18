@@ -8,6 +8,9 @@ import { runAgent } from "../services/agent/run.js";
 import { matchOrigin } from "../lib/matchOrigin.js";
 import { createRateLimiter } from "../lib/rateLimit.js";
 import { jsonError, ndjsonOk } from "../lib/openapi.js";
+import { ConversationSchema } from "../lib/conversationSchema.js";
+import type { Conversation } from "@repo/walkthrough-core";
+import { isAbortError } from "../lib/abort.js";
 
 // The visitor-facing surface (docs/v2/3-server/06 §2). No JWT — admission is
 // public_id + per-agent origin allowlist + rate limits, all checked before
@@ -55,6 +58,7 @@ const RunBodySchema = z.object({
       { message: `hostKnowledge exceeds ${HOST_KNOWLEDGE_MAX_BYTES} bytes` },
     ),
   visitorId: z.string().max(64).optional(),
+  conversation: ConversationSchema.optional(),
 });
 
 function clientIp(c: Context): string {
@@ -136,11 +140,12 @@ publicRouter.post(
       hostTools: body.hostTools,
       hostKnowledge: body.hostKnowledge,
       visitorId: body.visitorId,
+      conversation: body.conversation as Conversation | undefined,
       signal: controller.signal,
       onFrame: (frame) => stream.writeFrame(frame),
     })
       .catch((err) => {
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && !isAbortError(err)) {
           console.error("[public agent] run error", err);
         }
       })

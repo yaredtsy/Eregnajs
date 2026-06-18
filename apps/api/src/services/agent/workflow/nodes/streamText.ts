@@ -3,6 +3,7 @@ import type { GraphState } from "../graph.js";
 import { runChat } from "../../subagents/chat/run.js";
 import { pickModel } from "../../llm/provider.js";
 import { syncMessageTokenUsage } from "../../telemetry/index.js";
+import { isAbortError } from "../../../../lib/abort.js";
 import * as h from "../../patcher/helpers.js";
 
 // Streams a plain-text assistant reply into a text part on the conversation.
@@ -10,10 +11,8 @@ export async function streamTextNode(state: GraphState): Promise<Partial<GraphSt
   const { patcher, ctx, query, assistantMsgIndex, usageLedger } = state;
   const conv = patcher.conversation;
 
-  if (!conv.messages.some((m) => m.role === "user")) {
-    h.addUserMessage(conv, nanoid(10), query);
-    await patcher.emit();
-  }
+  h.addUserMessage(conv, nanoid(10), query);
+  await patcher.emit();
 
   let msgIndex = assistantMsgIndex;
   if (msgIndex < 0) {
@@ -42,6 +41,15 @@ export async function streamTextNode(state: GraphState): Promise<Partial<GraphSt
   try {
     await narrate();
   } catch (err) {
+    if (isAbortError(err)) {
+      if (streamed) {
+        h.setMessageStatus(conv, msgIndex, "complete");
+        try {
+          await patcher.emit();
+        } catch {}
+      }
+      throw err;
+    }
     if (streamed) {
       console.warn("[agent] chat broke mid-stream; keeping partial body", err);
     } else {

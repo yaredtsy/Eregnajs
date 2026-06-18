@@ -39,6 +39,9 @@ function MessageBubble({ message }: { message: Message }) {
             }
           />
         ))}
+        {message.metadata?.stopped && (
+          <p className="eregna-msg__stopped">Response stopped</p>
+        )}
       </div>
     </div>
   );

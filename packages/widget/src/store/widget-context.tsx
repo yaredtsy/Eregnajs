@@ -37,6 +37,8 @@ export interface WidgetState {
   driftDialog: { walkthroughId: string; query: string | null } | null;
   /** History replay: step indices that fail manifest resolve at play time. */
   runtimeSkips: Record<number, string>;
+  /** True while an agent run fetch is in flight (including pre-hello). */
+  streamActive: boolean;
 }
 
 export type WidgetAction =
@@ -61,10 +63,15 @@ export type WidgetAction =
       toolResult?: StepToolResult;
     }
   | { type: "SET_CONVERSATION"; conversation: Conversation }
+  | { type: "RUN_HELLO"; conversation: Conversation }
+  | { type: "NEW_CHAT" }
   | { type: "SET_PLAYBACK_CHOICE"; choice: PlaybackChoice }
   | { type: "TOGGLE_PLAN_PANEL" }
   | { type: "SHOW_DRIFT_DIALOG"; walkthroughId: string; query: string | null }
   | { type: "CLOSE_DRIFT_DIALOG" }
+  | { type: "RUN_START" }
+  | { type: "RUN_END" }
+  | { type: "STOP_RUN" }
   | { type: "STOP_WALKTHROUGH" }
   | {
       type: "SET_RUNTIME_SKIP";
@@ -155,6 +162,55 @@ function deriveLocalOffset(wt: WalkthroughPart, globalMs: number): number {
 function getActiveWt(state: WidgetState): WalkthroughPart | null {
   if (!state.activeWalkthroughId) return null;
   return findWalkthrough(state.conversation, state.activeWalkthroughId);
+}
+
+function markStoppedConversation(conversation: Conversation): Conversation {
+  const wasStreaming = conversation.messages.some((m) => m.status === "streaming");
+  let changed = false;
+
+  let messages = conversation.messages.map((msg) => {
+    if (msg.status !== "streaming") return msg;
+    changed = true;
+    return {
+      ...msg,
+      status: "complete" as const,
+      metadata: { ...msg.metadata, stopped: true },
+    };
+  });
+
+  if (!wasStreaming) {
+    const last = messages[messages.length - 1];
+    if (last?.role === "user") {
+      changed = true;
+      messages = [
+        ...messages,
+        {
+          id: `stopped_${Date.now()}`,
+          role: "assistant" as const,
+          parts: [],
+          status: "complete" as const,
+          metadata: { stopped: true },
+          createdAt: Date.now(),
+        },
+      ];
+    }
+  }
+
+  return changed ? { ...conversation, messages } : conversation;
+}
+
+function stopRunState(state: WidgetState): WidgetState {
+  return {
+    ...state,
+    streamActive: false,
+    activeWalkthroughId: null,
+    status: "idle",
+    stepOffsetMs: 0,
+    driftDialog: null,
+    runtimeSkips: {},
+    mode: state.mode === "detached" ? "bubble" : state.mode,
+    conversation: markStoppedConversation(state.conversation),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -276,6 +332,33 @@ function reducer(state: WidgetState, action: WidgetAction): WidgetState {
     case "SET_CONVERSATION":
       return { ...state, conversation: action.conversation };
 
+    case "RUN_HELLO": {
+      const incoming = action.conversation;
+      // Defensive: never wipe client history if the server hello is behind.
+      if (incoming.messages.length < state.conversation.messages.length) {
+        return {
+          ...state,
+          conversation: {
+            ...state.conversation,
+            sessionId: incoming.sessionId,
+            agentName: incoming.agentName,
+          },
+        };
+      }
+      return { ...state, conversation: incoming };
+    }
+
+    case "NEW_CHAT":
+      return {
+        ...stopRunState(state),
+        conversation: {
+          sessionId: `sess_${crypto.randomUUID()}`,
+          agentName: state.conversation.agentName,
+          messages: [],
+        },
+        composerValue: "",
+      };
+
     case "SET_PLAYBACK_CHOICE":
       return { ...state, playbackChoice: action.choice };
 
@@ -291,6 +374,15 @@ function reducer(state: WidgetState, action: WidgetAction): WidgetState {
 
     case "CLOSE_DRIFT_DIALOG":
       return { ...state, driftDialog: null };
+
+    case "RUN_START":
+      return { ...state, streamActive: true };
+
+    case "RUN_END":
+      return { ...state, streamActive: false };
+
+    case "STOP_RUN":
+      return stopRunState(state);
 
     case "STOP_WALKTHROUGH":
       return {
@@ -361,6 +453,7 @@ export function WidgetProvider({
     planPanelOpen: false,
     driftDialog: null,
     runtimeSkips: {},
+    streamActive: false,
     ...initialState,
   });
 

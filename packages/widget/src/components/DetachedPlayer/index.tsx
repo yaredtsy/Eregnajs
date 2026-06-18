@@ -1,4 +1,5 @@
 import { useWidget, useWidgetDispatch, findStreamingWalkthrough } from "../../store/widget-context";
+import { useRunSession } from "../../hooks/useAgentRun";
 import { PlayerBar } from "../PlayerBar";
 import { ThinkingTicker } from "./ThinkingTicker";
 import { PlanPanel } from "./PlanPanel";
@@ -9,6 +10,7 @@ import { PlanPanel } from "./PlanPanel";
 export function DetachedPlayer() {
   const { state, activeWt } = useWidget();
   const dispatch = useWidgetDispatch();
+  const { stop } = useRunSession();
 
   const streamingWt =
     state.playMode === "live" ? findStreamingWalkthrough(state.conversation) : null;
@@ -35,24 +37,37 @@ export function DetachedPlayer() {
               ? "Planning your walkthrough…"
               : `Preparing… ${wt.steps.length} step${wt.steps.length !== 1 ? "s" : ""} ready`}
           </span>
-          {showChoiceToggle && (
-            <div className="eregna-preparing__choice" role="radiogroup" aria-label="Playback">
+          <div className="eregna-preparing__actions">
+            {showChoiceToggle && (
+              <div className="eregna-preparing__choice" role="radiogroup" aria-label="Playback">
+                <button
+                  type="button"
+                  className={`eregna-choice-btn ${state.playbackChoice === "live" ? "eregna-choice-btn--on" : ""}`}
+                  onClick={() => dispatch({ type: "SET_PLAYBACK_CHOICE", choice: "live" })}
+                >
+                  ▶ Watch live
+                </button>
+                <button
+                  type="button"
+                  className={`eregna-choice-btn ${state.playbackChoice === "on-demand" ? "eregna-choice-btn--on" : ""}`}
+                  onClick={() => dispatch({ type: "SET_PLAYBACK_CHOICE", choice: "on-demand" })}
+                >
+                  ≡ Wait for the full guide
+                </button>
+              </div>
+            )}
+            {state.streamActive && (
               <button
+                aria-label="Stop"
+                className="eregna-composer__stop"
+                onClick={stop}
+                title="Stop"
                 type="button"
-                className={`eregna-choice-btn ${state.playbackChoice === "live" ? "eregna-choice-btn--on" : ""}`}
-                onClick={() => dispatch({ type: "SET_PLAYBACK_CHOICE", choice: "live" })}
               >
-                ▶ Watch live
+                ■
               </button>
-              <button
-                type="button"
-                className={`eregna-choice-btn ${state.playbackChoice === "on-demand" ? "eregna-choice-btn--on" : ""}`}
-                onClick={() => dispatch({ type: "SET_PLAYBACK_CHOICE", choice: "on-demand" })}
-              >
-                ≡ Wait for the full guide
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>

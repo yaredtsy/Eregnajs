@@ -159,6 +159,17 @@
   color: #cbd5e1;
 }
 
+.eregna-msg__stopped {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-style: italic;
+  color: #94a3b8;
+}
+.eregna-msg__stopped::before {
+  content: "— ";
+  color: #64748b;
+}
+
 /* ── Walkthrough card ─────────────────────────────────────────────────────── */
 .eregna-wt-card {
   display: flex;
@@ -251,6 +262,17 @@
   height: 34px;
 }
 .eregna-icon-btn--primary:hover { background: #4338ca; }
+.eregna-icon-btn--text {
+  width: auto;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.eregna-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 /* ── Speed select ─────────────────────────────────────────────────────────── */
 .eregna-speed-select {
@@ -294,13 +316,16 @@
 }
 .eregna-composer__input::placeholder { color: #4b5563; }
 .eregna-composer__input:focus { border-color: rgba(99,102,241,0.6); }
-.eregna-composer__send {
+.eregna-composer__input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.eregna-composer__send,
+.eregna-composer__stop {
   width: 28px;
   height: 28px;
   border: none;
   border-radius: 6px;
-  background: #4f46e5;
-  color: #fff;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -308,6 +333,16 @@
   font-size: 14px;
   flex-shrink: 0;
 }
+.eregna-composer__send {
+  background: #4f46e5;
+  color: #fff;
+}
+.eregna-composer__stop {
+  background: #3f1515;
+  color: #fca5a5;
+  font-size: 11px;
+}
+.eregna-composer__stop:hover { background: #5c1a1a; }
 
 /* ── Detached player ──────────────────────────────────────────────────────── */
 @keyframes eregna-rise {
@@ -367,6 +402,12 @@
   font-size: 12px;
   font-weight: 500;
   color: #a5b4fc;
+}
+.eregna-preparing__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .eregna-preparing__choice { display: flex; gap: 6px; flex-shrink: 0; }
 .eregna-choice-btn {

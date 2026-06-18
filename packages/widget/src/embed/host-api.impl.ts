@@ -17,6 +17,7 @@ let _ask: AskFn | null = null;
 let _ready = false;
 let _openFn: (() => void) | null = null;
 let _closeFn: (() => void) | null = null;
+let _stopFn: (() => void) | null = null;
 
 let _readyResolve!: () => void;
 const _readyPromise = new Promise<void>((res) => {
@@ -27,11 +28,12 @@ const readyCallbacks = new Set<() => void>();
 
 export function mountReady(
   askFn: AskFn,
-  ui?: { open: () => void; close: () => void },
+  ui?: { open: () => void; close: () => void; stop: () => void },
 ): void {
   _ask = askFn;
   _openFn = ui?.open ?? null;
   _closeFn = ui?.close ?? null;
+  _stopFn = ui?.stop ?? null;
   _ready = true;
   _readyResolve();
   for (const cb of readyCallbacks) cb();
@@ -101,6 +103,14 @@ export function createHostApi(): HostApi {
         _closeFn?.();
       } catch (err) {
         console.warn("[eregna] close failed", err);
+      }
+    },
+
+    stop() {
+      try {
+        _stopFn?.();
+      } catch (err) {
+        console.warn("[eregna] stop failed", err);
       }
     },
 

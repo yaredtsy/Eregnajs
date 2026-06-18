@@ -1,5 +1,6 @@
 import { useWidget, useWidgetDispatch } from "../../store/widget-context";
 import { ChapterTimeline } from "../DetachedPlayer/ChapterTimeline";
+import { Composer } from "../Composer";
 
 function PlayIcon() {
   return (
@@ -33,23 +34,7 @@ export function PlayerBar() {
     dispatch({ type: "SET_STATUS", status: isPlaying ? "paused" : "playing" });
   }
 
-  function handleComposerKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === " " && state.composerValue === "" && !isLive) {
-      e.preventDefault();
-      togglePlay();
-    }
-    if (e.key === "Enter") {
-      e.preventDefault();
-      submitAsk();
-    }
-  }
-
-  function submitAsk() {
-    const query = state.composerValue.trim();
-    if (!query) return;
-    dispatch({ type: "SET_COMPOSER", value: "" });
-    // Asking mid-walkthrough aborts the current run and starts a new one —
-    // the host API's ask() is the single entry point for both.
+  function submitAsk(query: string) {
     void (window as { eregna?: { ask(q: string): Promise<void> } }).eregna
       ?.ask(query)
       .catch((err: unknown) => console.error("[eregna] ask failed", err));
@@ -111,32 +96,22 @@ export function PlayerBar() {
         </button>
       </div>
 
-      <div className="eregna-composer">
-        <input
-          className="eregna-composer__input"
-          onChange={(e) => dispatch({ type: "SET_COMPOSER", value: e.target.value })}
-          onKeyDown={handleComposerKey}
-          placeholder={
-            isLive
-              ? "Ask a follow-up (stops this walkthrough)…"
-              : isPlaying
-                ? "Space to pause · type to ask…"
-                : "Ask a follow-up…"
+      <Composer
+        onSubmit={submitAsk}
+        onKeyDown={(e) => {
+          if (e.key === " " && state.composerValue === "" && !isLive && !state.streamActive) {
+            e.preventDefault();
+            togglePlay();
           }
-          type="text"
-          value={state.composerValue}
-        />
-        {state.composerValue && (
-          <button
-            aria-label="Send"
-            className="eregna-composer__send"
-            type="button"
-            onClick={submitAsk}
-          >
-            ↵
-          </button>
-        )}
-      </div>
+        }}
+        placeholder={
+          isLive
+            ? "Ask a follow-up (stops this walkthrough)…"
+            : isPlaying
+              ? "Space to pause · type to ask…"
+              : "Ask a follow-up…"
+        }
+      />
     </div>
   );
 }

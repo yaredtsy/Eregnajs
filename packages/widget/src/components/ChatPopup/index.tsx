@@ -1,11 +1,19 @@
 import { useWidget, useWidgetDispatch } from "../../store/widget-context";
+import { useRunSession } from "../../hooks/useAgentRun";
 import { PlayerBar } from "../PlayerBar";
+import { Composer } from "../Composer";
 import { MessageList } from "./MessageList";
 
 export function ChatPopup() {
   const { state } = useWidget();
   const dispatch = useWidgetDispatch();
+  const { stop } = useRunSession();
   const isActive = !!state.activeWalkthroughId;
+
+  function close() {
+    stop();
+    dispatch({ type: "SET_MODE", mode: "closed" });
+  }
 
   return (
     <div className="eregna-chat-popup">
@@ -19,17 +27,34 @@ export function ChatPopup() {
               {state.conversation.agentName}
             </p>
             <p className="eregna-chat-popup__status">
-              {state.status === "playing"
-                ? "Playing walkthrough…"
-                : state.status === "paused"
-                  ? "Paused"
-                  : state.status === "complete"
-                    ? "Done"
-                    : "Online"}
+              {state.streamActive
+                ? "Responding…"
+                : state.status === "playing"
+                  ? "Playing walkthrough…"
+                  : state.status === "paused"
+                    ? "Paused"
+                    : state.status === "complete"
+                      ? "Done"
+                      : "Online"}
             </p>
           </div>
         </div>
         <div className="eregna-chat-popup__header-actions">
+          {state.conversation.messages.length > 0 && (
+            <button
+              aria-label="New chat"
+              className="eregna-icon-btn eregna-icon-btn--text"
+              disabled={state.streamActive}
+              onClick={() => {
+                stop();
+                dispatch({ type: "NEW_CHAT" });
+              }}
+              title="New chat"
+              type="button"
+            >
+              New
+            </button>
+          )}
           {isActive && (
             <button
               aria-label="Detach player"
@@ -44,7 +69,7 @@ export function ChatPopup() {
           <button
             aria-label="Close"
             className="eregna-icon-btn"
-            onClick={() => dispatch({ type: "SET_MODE", mode: "closed" })}
+            onClick={close}
             type="button"
           >
             ×
@@ -56,30 +81,7 @@ export function ChatPopup() {
         <MessageList />
       </div>
 
-      {isActive ? (
-        <PlayerBar />
-      ) : (
-        <div className="eregna-composer">
-          <input
-            className="eregna-composer__input"
-            onChange={(e) =>
-              dispatch({ type: "SET_COMPOSER", value: e.target.value })
-            }
-            onKeyDown={(e) => {
-              if (e.key !== "Enter") return;
-              const query = state.composerValue.trim();
-              if (!query) return;
-              dispatch({ type: "SET_COMPOSER", value: "" });
-              void (window as { eregna?: { ask(q: string): Promise<void> } }).eregna
-                ?.ask(query)
-                .catch((err: unknown) => console.error("[eregna] ask failed", err));
-            }}
-            placeholder="Ask anything…"
-            type="text"
-            value={state.composerValue}
-          />
-        </div>
-      )}
+      {isActive ? <PlayerBar /> : <Composer />}
     </div>
   );
 }

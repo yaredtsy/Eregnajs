@@ -10,6 +10,8 @@ export type MessagePart = TextPart | WalkthroughPart;
 
 export type MessageMetadata = {
   tokenUsage?: TokenUsageReport;
+  /** Set client-side when the visitor stops a streaming reply. */
+  stopped?: boolean;
 };
 
 export type Message = {

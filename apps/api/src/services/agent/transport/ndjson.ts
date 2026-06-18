@@ -5,6 +5,13 @@ export function createNdjsonStream(c: Context) {
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
   const writer = writable.getWriter();
   const encoder = new TextEncoder();
+  let closed = false;
+
+  const markClosed = () => {
+    closed = true;
+  };
+
+  c.req.raw.signal?.addEventListener("abort", markClosed, { once: true });
 
   return {
     response: new Response(readable, {
@@ -17,17 +24,34 @@ export function createNdjsonStream(c: Context) {
     }),
 
     async writeFrame(frame: RunFrame): Promise<void> {
-      const line = JSON.stringify(frame) + "\n";
-      // Awaiting the writer is the backpressure: a slow client slows the run.
-      await writer.write(encoder.encode(line));
+      if (closed) return;
+      try {
+        const line = JSON.stringify(frame) + "\n";
+        await writer.write(encoder.encode(line));
+      } catch {
+        // Client disconnected — stop writing; the run's AbortSignal will cancel upstream.
+        closed = true;
+      }
     },
 
     async close(): Promise<void> {
-      await writer.close();
+      if (closed) return;
+      closed = true;
+      try {
+        await writer.close();
+      } catch {
+        // Writable already closed or errored when the client disconnected.
+      }
     },
 
     async abort(reason?: unknown): Promise<void> {
-      await writer.abort(reason);
+      if (closed) return;
+      closed = true;
+      try {
+        await writer.abort(reason);
+      } catch {
+        // No-op if the stream is already gone.
+      }
     },
   };
 }

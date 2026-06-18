@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { composeContext } from "./context/compose.js";
+import { extractHistory } from "./context/extractHistory.js";
 import { createPatcher } from "./patcher/createPatcher.js";
 import * as h from "./patcher/helpers.js";
 import { buildGraph } from "./workflow/graph.js";
@@ -8,6 +9,7 @@ import * as runs from "./runs/index.js";
 import { WIRE_PROTOCOL } from "@repo/walkthrough-core";
 import type { Conversation, RunFrame } from "@repo/walkthrough-core";
 import type { AgentContext } from "./context/types.js";
+import { isAbortError } from "../../lib/abort.js";
 
 export interface RunOpts {
   agentPublicId: string;
@@ -17,6 +19,7 @@ export interface RunOpts {
   hostTools?: Array<{ name: string; description: string; parameters?: Record<string, unknown> }>;
   hostKnowledge?: Array<{ title: string; content: string }>;
   visitorId?: string;
+  conversation?: Conversation;
   signal?: AbortSignal;
   onFrame: (frame: RunFrame) => Promise<void>;
 }
@@ -25,11 +28,13 @@ export async function runAgent(opts: RunOpts): Promise<void> {
   const startedAt = Date.now();
   const runId = nanoid(10);
 
-  const initialConv: Conversation = {
-    sessionId: runId,
-    agentName: "Eregna Agent",
-    messages: [],
-  };
+  const initialConv: Conversation = opts.conversation
+    ? structuredClone(opts.conversation)
+    : {
+        sessionId: runId,
+        agentName: "Eregna Agent",
+        messages: [],
+      };
 
   const patcher = createPatcher(initialConv, (frame) =>
     opts.onFrame({ kind: "patch", ...frame }),
@@ -51,6 +56,11 @@ export async function runAgent(opts: RunOpts): Promise<void> {
       hostTools: opts.hostTools ?? [],
       hostKnowledge: opts.hostKnowledge ?? [],
     });
+    ctx = {
+      ...ctx,
+      conversationHistory: extractHistory(initialConv),
+    };
+    initialConv.agentName = ctx.agent.name ?? initialConv.agentName;
 
     const usageLedger = new TokenLedger();
     const graph = buildGraph();
@@ -88,8 +98,12 @@ export async function runAgent(opts: RunOpts): Promise<void> {
 
     await opts.onFrame({ kind: "end", seq: patcher.getLog().length, status: "complete" });
   } catch (err) {
-    const aborted = opts.signal?.aborted ?? false;
+    const aborted = opts.signal?.aborted ?? isAbortError(err);
     const message = err instanceof Error ? err.message : String(err);
+
+    if (aborted) {
+      finalizeStreamingMessages(patcher.conversation);
+    }
 
     // Surface the failure in the document, then always terminate the stream.
     // Both are best-effort: the connection may already be gone.
@@ -150,4 +164,10 @@ function markRunError(conv: Conversation, message: string): void {
     return;
   }
   h.failWalkthrough(conv, msgIndex, partIndex, message);
+}
+
+function finalizeStreamingMessages(conv: Conversation): void {
+  for (const msg of conv.messages) {
+    if (msg.status === "streaming") msg.status = "complete";
+  }
 }

@@ -18,6 +18,7 @@ export interface HostApi {
   ask(query: string): Promise<void>;
   open(): void;
   close(): void;
+  stop(): void;
   readonly ready: boolean;
   onReady(cb: () => void): () => void;
   __debugResolve(
