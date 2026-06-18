@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS agent_runs (
                   CHECK (status IN ('streaming','complete','aborted','error')),
   error_message   TEXT,
 
+  token_usage     TEXT,
+
   started_at      INTEGER NOT NULL,
   completed_at    INTEGER
 );

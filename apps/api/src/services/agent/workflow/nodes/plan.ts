@@ -2,15 +2,19 @@ import type { GraphState } from "../graph.js";
 import { runPlanner } from "../../subagents/planner/run.js";
 import { pickModel } from "../../llm/provider.js";
 import { withRetry } from "../../llm/withRetry.js";
+import { syncMessageTokenUsage } from "../../telemetry/index.js";
 import * as h from "../../patcher/helpers.js";
 import { nanoid } from "nanoid";
 
 export async function planNode(state: GraphState): Promise<Partial<GraphState>> {
-  const { patcher, ctx, query, assistantMsgIndex, walkthroughPartIndex } = state;
+  const { patcher, ctx, query, assistantMsgIndex, walkthroughPartIndex, usageLedger } = state;
   const conv = patcher.conversation;
 
   const model = pickModel(ctx.agent.model);
-  const plan = await withRetry(() => runPlanner(model, ctx, query), { label: "planner" });
+  const plan = await withRetry(
+    () => runPlanner(model, ctx, query, { ledger: usageLedger }),
+    { label: "planner" },
+  );
 
   const part = conv.messages[assistantMsgIndex]?.parts[walkthroughPartIndex];
   if (part?.type === "walkthrough") {
@@ -35,6 +39,7 @@ export async function planNode(state: GraphState): Promise<Partial<GraphState>> 
     });
   }
 
+  syncMessageTokenUsage(conv, assistantMsgIndex, usageLedger);
   await patcher.emit();
   return { plan };
 }

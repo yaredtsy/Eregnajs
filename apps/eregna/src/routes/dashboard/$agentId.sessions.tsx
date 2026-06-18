@@ -28,6 +28,12 @@ function duration(startedAt: number, completedAt: number | null) {
 	return ms < 60_000 ? `${(ms / 1000).toFixed(1)}s` : `${(ms / 60_000).toFixed(1)}m`;
 }
 
+function formatTokens(totals: { totalTokens: number } | null | undefined) {
+	if (!totals || totals.totalTokens <= 0) return "—";
+	if (totals.totalTokens < 1000) return String(totals.totalTokens);
+	return `${(totals.totalTokens / 1000).toFixed(1)}k`;
+}
+
 function AgentSessionsPage() {
 	const { agentId } = Route.useParams();
 	const { data: runs, isLoading } = useAgentRuns(agentId);
@@ -61,6 +67,7 @@ function AgentSessionsPage() {
 								<th className="px-4 py-3">Query</th>
 								<th className="px-4 py-3">Status</th>
 								<th className="px-4 py-3">Duration</th>
+								<th className="px-4 py-3">Tokens</th>
 								<th className="px-4 py-3">Started</th>
 							</tr>
 						</thead>
@@ -79,6 +86,9 @@ function AgentSessionsPage() {
 									<td className="px-4 py-3">{statusBadge(run.status)}</td>
 									<td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
 										{duration(run.started_at, run.completed_at)}
+									</td>
+									<td className="px-4 py-3 text-muted-foreground whitespace-nowrap font-mono">
+										{formatTokens(run.token_totals)}
 									</td>
 									<td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
 										{new Date(run.started_at).toLocaleString()}

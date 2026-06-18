@@ -3,12 +3,22 @@ import type { GraphState } from "../graph.js";
 import { runStepper } from "../../subagents/stepper/run.js";
 import { pickModel } from "../../llm/provider.js";
 import { withRetry } from "../../llm/withRetry.js";
+import { syncMessageTokenUsage } from "../../telemetry/index.js";
 import * as h from "../../patcher/helpers.js";
 
 // Runs the Stepper for the current chapter and adds its steps to the conversation.
 // Also updates chapter.stepIndex to point at the first step of this chapter.
 export async function streamChapterNode(state: GraphState): Promise<Partial<GraphState>> {
-  const { patcher, ctx, plan, chapterIndex, globalStepOffset, assistantMsgIndex, walkthroughPartIndex } = state;
+  const {
+    patcher,
+    ctx,
+    plan,
+    chapterIndex,
+    globalStepOffset,
+    assistantMsgIndex,
+    walkthroughPartIndex,
+    usageLedger,
+  } = state;
   const conv = patcher.conversation;
   const chapter = plan!.chapters[chapterIndex]!;
 
@@ -16,9 +26,14 @@ export async function streamChapterNode(state: GraphState): Promise<Partial<Grap
 
   let stepList;
   try {
-    stepList = await withRetry(() => runStepper(model, ctx, chapter), {
-      label: `stepper(chapter ${chapterIndex})`,
-    });
+    stepList = await withRetry(
+      () =>
+        runStepper(model, ctx, chapter, {
+          ledger: usageLedger,
+          chapterIndex,
+        }),
+      { label: `stepper(chapter ${chapterIndex})` },
+    );
   } catch (err) {
     console.error(`[agent] stepper failed for chapter ${chapterIndex}; degrading`, err);
     h.setChapterStatus(conv, assistantMsgIndex, walkthroughPartIndex, chapterIndex, "failed");
@@ -32,6 +47,7 @@ export async function streamChapterNode(state: GraphState): Promise<Partial<Grap
     if (chapterIndex === 0) {
       h.setWalkthroughStatus(conv, assistantMsgIndex, walkthroughPartIndex, "playing");
     }
+    syncMessageTokenUsage(conv, assistantMsgIndex, usageLedger);
     await patcher.emit();
     return { stepIndexInChapter: 0 };
   }
@@ -63,6 +79,7 @@ export async function streamChapterNode(state: GraphState): Promise<Partial<Grap
     h.setWalkthroughStatus(conv, assistantMsgIndex, walkthroughPartIndex, "playing");
   }
 
+  syncMessageTokenUsage(conv, assistantMsgIndex, usageLedger);
   await patcher.emit();
 
   return {

@@ -1,5 +1,6 @@
 import { getRunsDb } from "../../../lib/sqlite.js";
 import type { AgentRunRow } from "./types.js";
+import type { TokenUsageReport } from "@repo/walkthrough-core";
 
 interface RawRow {
   id: string;
@@ -13,6 +14,7 @@ interface RawRow {
   patch_log: string;
   status: string;
   error_message: string | null;
+  token_usage: string | null;
   started_at: number;
   completed_at: number | null;
 }
@@ -31,5 +33,8 @@ export function load(id: string, ownerId: string): AgentRunRow | null {
     status: row.status as AgentRunRow["status"],
     state_snapshot: JSON.parse(row.state_snapshot) as AgentRunRow["state_snapshot"],
     patch_log: JSON.parse(row.patch_log) as AgentRunRow["patch_log"],
+    token_usage: row.token_usage
+      ? (JSON.parse(row.token_usage) as TokenUsageReport)
+      : null,
   };
 }

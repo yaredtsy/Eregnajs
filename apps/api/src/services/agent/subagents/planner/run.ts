@@ -2,6 +2,8 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import type { AgentContext } from "../../context/types.js";
 import { composeSystemPrompt } from "../../prompts/index.js";
+import type { TokenLedger } from "../../telemetry/index.js";
+import { trackStructuredInvoke } from "../../telemetry/index.js";
 import { buildPlannerPrompt } from "./prompt.js";
 import { PlanSchema } from "./schema.js";
 import type { Plan } from "../types.js";
@@ -19,32 +21,45 @@ export interface PlannerRunResult {
   droppedChapterKeys: string[];
 }
 
+export interface PlannerRunOpts {
+  ledger?: TokenLedger;
+}
+
 export async function runPlanner(
   model: BaseChatModel,
   ctx: AgentContext,
   query: string,
+  opts?: PlannerRunOpts,
 ): Promise<Plan> {
-  return (await runPlannerDetailed(model, ctx, query)).plan;
+  return (await runPlannerDetailed(model, ctx, query, opts)).plan;
 }
 
 export async function runPlannerDetailed(
   model: BaseChatModel,
   ctx: AgentContext,
   query: string,
+  opts?: PlannerRunOpts,
 ): Promise<PlannerRunResult> {
-  const structured = model.withStructuredOutput(PlanSchema);
   const systemPrompt = composeSystemPrompt(ctx);
   const keys = validElementKeys(ctx);
 
   let repairAttempted = false;
   let droppedChapterKeys: string[] = [];
 
-  const invoke = async (repairHint?: string) => {
+  const invoke = async (repairHint?: string, attempt = 1) => {
     const userPrompt = buildPlannerPrompt(ctx, query, repairHint);
-    const result = await structured.invoke([
-      new SystemMessage(systemPrompt),
-      new HumanMessage(userPrompt),
-    ]);
+    const messages = [new SystemMessage(systemPrompt), new HumanMessage(userPrompt)];
+
+    const trackMeta = { attempt, repair: Boolean(repairHint) };
+    const result = opts?.ledger
+      ? await trackStructuredInvoke(model, PlanSchema, messages, {
+          ledger: opts.ledger,
+          label: "planner",
+          model: ctx.agent.model,
+          meta: trackMeta,
+        })
+      : await model.withStructuredOutput(PlanSchema).invoke(messages);
+
     return {
       planGoal: result.planGoal,
       planRationale: result.planRationale,
@@ -58,7 +73,7 @@ export async function runPlannerDetailed(
 
   if (validationError) {
     repairAttempted = true;
-    plan = await invoke(validationError);
+    plan = await invoke(validationError, 2);
     validationError = validatePlanKeys(plan, keys);
   }
 

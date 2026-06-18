@@ -1,11 +1,22 @@
 import type { GraphState } from "../graph.js";
 import { runNarrator } from "../../subagents/narrator/run.js";
 import { pickModel } from "../../llm/provider.js";
+import { syncMessageTokenUsage } from "../../telemetry/index.js";
 import * as h from "../../patcher/helpers.js";
 
 // Streams the popover body for the current step, then advances the step cursor.
 export async function streamBodyNode(state: GraphState): Promise<Partial<GraphState>> {
-  const { patcher, ctx, plan, chapterIndex, stepIndexInChapter, globalStepOffset, assistantMsgIndex, walkthroughPartIndex } = state;
+  const {
+    patcher,
+    ctx,
+    plan,
+    chapterIndex,
+    stepIndexInChapter,
+    globalStepOffset,
+    assistantMsgIndex,
+    walkthroughPartIndex,
+    usageLedger,
+  } = state;
   const conv = patcher!.conversation;
   const chapter = plan!.chapters[chapterIndex]!;
   const part = conv.messages[assistantMsgIndex]?.parts[walkthroughPartIndex];
@@ -31,11 +42,17 @@ export async function streamBodyNode(state: GraphState): Promise<Partial<GraphSt
 
     let streamed = false;
     const narrate = async () => {
-      for await (const chunk of runNarrator(model, chapter, stepSpec, stepIndexInChapter)) {
+      for await (const chunk of runNarrator(model, chapter, stepSpec, stepIndexInChapter, {
+        ledger: usageLedger,
+        model: ctx!.agent.model,
+        chapterIndex,
+        stepIndex: globalStepIdx,
+      })) {
         streamed = true;
         h.appendPopoverChunk(conv, assistantMsgIndex, walkthroughPartIndex, globalStepIdx, chunk);
         await patcher!.emit();
       }
+      syncMessageTokenUsage(conv, assistantMsgIndex, usageLedger);
     };
 
     try {

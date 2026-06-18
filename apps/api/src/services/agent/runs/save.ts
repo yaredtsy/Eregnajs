@@ -4,10 +4,10 @@ import type { SaveOpts } from "./types.js";
 const STMT = `
   INSERT INTO agent_runs (
     id, agent_id, owner_id, conversation_id, visitor_id, page_url, query,
-    state_snapshot, patch_log, status, error_message,
+    state_snapshot, patch_log, status, error_message, token_usage,
     started_at, completed_at
   ) VALUES ($id, $agentId, $ownerId, $convId, $visId, $url, $query,
-            $snap, $log, $status, $err,
+            $snap, $log, $status, $err, $usage,
             $startedAt, $completedAt)
 `;
 
@@ -25,6 +25,7 @@ export function save(opts: SaveOpts): string {
     $log: JSON.stringify(opts.patchLog),
     $status: opts.status,
     $err: opts.errorMessage ?? null,
+    $usage: opts.tokenUsage ? JSON.stringify(opts.tokenUsage) : null,
     $startedAt: opts.startedAt,
     $completedAt: Date.now(),
   });

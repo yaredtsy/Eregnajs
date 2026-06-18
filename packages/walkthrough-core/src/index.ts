@@ -3,9 +3,18 @@ export type {
   MessageStatus,
   TextPart,
   MessagePart,
+  MessageMetadata,
   Message,
   Conversation,
 } from "./conversation/types.js";
+
+export type {
+  TokenUsageCounts,
+  TokenUsageCall,
+  TokenUsageByLabel,
+  TokenUsageReport,
+} from "./telemetry/types.js";
+export { ZERO_TOKEN_USAGE } from "./telemetry/types.js";
 
 export type {
   WalkthroughStatus,

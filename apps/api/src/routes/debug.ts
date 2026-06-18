@@ -5,10 +5,11 @@ import { agentService } from "../services/agent.service.js";
 import { composeContext } from "../services/agent/context/compose.js";
 import { inspectPrompt } from "../services/agent/prompts/index.js";
 import { pickModel } from "../services/agent/llm/provider.js";
+import { TokenLedger } from "../services/agent/telemetry/index.js";
 import { runPlannerDetailed } from "../services/agent/subagents/planner/run.js";
 import { runStepperDetailed } from "../services/agent/subagents/stepper/run.js";
 import { buildNarratorPrompt } from "../services/agent/subagents/narrator/prompt.js";
-import { runNarrator } from "../services/agent/subagents/narrator/run.js";
+import { runNarratorFull } from "../services/agent/subagents/narrator/run.js";
 import { focusChapter } from "../services/agent/context/focusChapter.js";
 import { PlanChapterSchema } from "../services/agent/subagents/planner/schema.js";
 import { jsonError } from "../lib/http.js";
@@ -95,7 +96,8 @@ debugRouter.post(
 
     const { ctx } = resolved;
     const model = pickModel(ctx.agent.model);
-    const result = await runPlannerDetailed(model, ctx, body.query);
+    const ledger = new TokenLedger();
+    const result = await runPlannerDetailed(model, ctx, body.query, { ledger });
 
     return c.json({
       data: {
@@ -104,6 +106,7 @@ debugRouter.post(
         plan: result.plan,
         repairAttempted: result.repairAttempted,
         droppedChapterKeys: result.droppedChapterKeys,
+        tokenUsage: ledger.report(),
         thoughts: [
           { phase: "system", label: "Reading your question…" },
           { phase: "plan", label: result.plan.thought },
@@ -129,10 +132,11 @@ debugRouter.post(
 
     const { ctx } = resolved;
     const model = pickModel(ctx.agent.model);
+    const ledger = new TokenLedger();
 
     let chapter = body.chapter;
     if (!chapter) {
-      const planResult = await runPlannerDetailed(model, ctx, body.query);
+      const planResult = await runPlannerDetailed(model, ctx, body.query, { ledger });
       const idx = body.chapterIndex ?? 0;
       chapter = planResult.plan.chapters[idx];
       if (!chapter) {
@@ -141,7 +145,10 @@ debugRouter.post(
     }
 
     const chapterCtx = focusChapter(ctx, chapter.elementId);
-    const stepperResult = await runStepperDetailed(model, ctx, chapter);
+    const stepperResult = await runStepperDetailed(model, ctx, chapter, {
+      ledger,
+      chapterIndex: body.chapterIndex,
+    });
 
     return c.json({
       data: {
@@ -157,6 +164,7 @@ debugRouter.post(
         prompt: stepperResult.prompt,
         stepList: stepperResult.stepList,
         repairAttempted: stepperResult.repairAttempted,
+        tokenUsage: ledger.report(),
         thought: { phase: "chapter", label: stepperResult.stepList.thought },
       },
     });
@@ -187,17 +195,20 @@ debugRouter.post(
     const { ctx } = resolved;
     const model = pickModel(ctx.agent.model);
     const prompt = buildNarratorPrompt(body.chapter, body.step, body.stepIndex);
-
-    let text = "";
-    for await (const chunk of runNarrator(model, body.chapter, body.step, body.stepIndex)) {
-      text += chunk;
-    }
+    const ledger = new TokenLedger();
+    const narrated = await runNarratorFull(model, body.chapter, body.step, body.stepIndex, {
+      ledger,
+      model: ctx.agent.model,
+      chapterIndex: undefined,
+      stepIndex: body.stepIndex,
+    });
 
     return c.json({
       data: {
         prompt,
-        text,
+        text: narrated.text,
         model: ctx.agent.model,
+        tokenUsage: ledger.report(),
       },
     });
   },

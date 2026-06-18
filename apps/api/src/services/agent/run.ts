@@ -3,6 +3,7 @@ import { composeContext } from "./context/compose.js";
 import { createPatcher } from "./patcher/createPatcher.js";
 import * as h from "./patcher/helpers.js";
 import { buildGraph } from "./workflow/graph.js";
+import { TokenLedger } from "./telemetry/index.js";
 import * as runs from "./runs/index.js";
 import { WIRE_PROTOCOL } from "@repo/walkthrough-core";
 import type { Conversation, RunFrame } from "@repo/walkthrough-core";
@@ -51,6 +52,7 @@ export async function runAgent(opts: RunOpts): Promise<void> {
       hostKnowledge: opts.hostKnowledge ?? [],
     });
 
+    const usageLedger = new TokenLedger();
     const graph = buildGraph();
     await graph.invoke(
       {
@@ -63,9 +65,12 @@ export async function runAgent(opts: RunOpts): Promise<void> {
         chapterIndex: 0,
         stepIndexInChapter: 0,
         globalStepOffset: 0,
+        usageLedger,
       },
       { signal: opts.signal },
     );
+
+    const tokenUsage = usageLedger.report();
 
     runs.save({
       id: runId,
@@ -78,6 +83,7 @@ export async function runAgent(opts: RunOpts): Promise<void> {
       visitorId: opts.visitorId,
       pageUrl: opts.pageUrl,
       startedAt,
+      tokenUsage,
     });
 
     await opts.onFrame({ kind: "end", seq: patcher.getLog().length, status: "complete" });
@@ -115,10 +121,19 @@ export async function runAgent(opts: RunOpts): Promise<void> {
         pageUrl: opts.pageUrl,
         errorMessage: message,
         startedAt,
+        tokenUsage: extractMessageTokenUsage(patcher.conversation),
       });
     }
     throw err;
   }
+}
+
+function extractMessageTokenUsage(conv: Conversation) {
+  for (let i = conv.messages.length - 1; i >= 0; i--) {
+    const usage = conv.messages[i]?.metadata?.tokenUsage;
+    if (usage) return usage;
+  }
+  return undefined;
 }
 
 function markRunError(conv: Conversation, message: string): void {

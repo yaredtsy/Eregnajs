@@ -130,6 +130,12 @@ export type UpdateSiteFactBody = {
 
 export type RunStatus = "streaming" | "complete" | "aborted" | "error";
 
+export type TokenUsageCounts = {
+	inputTokens: number;
+	outputTokens: number;
+	totalTokens: number;
+};
+
 export type AgentRunListItem = {
 	id: string;
 	agent_id: string;
@@ -137,4 +143,5 @@ export type AgentRunListItem = {
 	status: RunStatus;
 	started_at: number;
 	completed_at: number | null;
+	token_totals: TokenUsageCounts | null;
 };

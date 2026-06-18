@@ -2,6 +2,7 @@ import { Annotation, StateGraph, START, END } from "@langchain/langgraph";
 import type { AgentContext } from "../context/types.js";
 import type { Plan } from "../subagents/types.js";
 import type { Patcher } from "../patcher/createPatcher.js";
+import { TokenLedger } from "../telemetry/index.js";
 import { enrichNode } from "./nodes/enrich.js";
 import { planNode } from "./nodes/plan.js";
 import { streamChapterNode } from "./nodes/streamChapter.js";
@@ -26,6 +27,7 @@ export const GraphAnnotation = Annotation.Root({
   chapterIndex:         Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
   stepIndexInChapter:   Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
   globalStepOffset:     Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
+  usageLedger:          Annotation<TokenLedger>({ reducer: (_, n) => n, default: () => new TokenLedger() }),
 });
 
 export type GraphState = typeof GraphAnnotation.State;

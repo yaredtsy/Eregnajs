@@ -24,7 +24,7 @@ function initialise(database: Database): void {
 
 // schema.sql only CREATEs IF NOT EXISTS — existing db files need ALTERs.
 function migrate(database: Database): void {
-  const cols = database
+  let cols = database
     .prepare("PRAGMA table_info(agent_runs)")
     .all() as Array<{ name: string }>;
   if (!cols.some((c) => c.name === "owner_id")) {
@@ -32,5 +32,11 @@ function migrate(database: Database): void {
     database.exec(
       "CREATE INDEX IF NOT EXISTS agent_runs_owner_id_started_at ON agent_runs(owner_id, started_at DESC)",
     );
+    cols = database
+      .prepare("PRAGMA table_info(agent_runs)")
+      .all() as Array<{ name: string }>;
+  }
+  if (!cols.some((c) => c.name === "token_usage")) {
+    database.exec("ALTER TABLE agent_runs ADD COLUMN token_usage TEXT");
   }
 }

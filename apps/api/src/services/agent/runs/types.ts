@@ -1,5 +1,5 @@
 import type { Conversation } from "@repo/walkthrough-core";
-import type { PatchFrame } from "@repo/walkthrough-core";
+import type { PatchFrame, TokenUsageReport } from "@repo/walkthrough-core";
 
 export type RunStatus = "streaming" | "complete" | "aborted" | "error";
 
@@ -15,6 +15,7 @@ export interface AgentRunRow {
   patch_log: PatchFrame[];
   status: RunStatus;
   error_message: string | null;
+  token_usage: TokenUsageReport | null;
   started_at: number;
   completed_at: number | null;
 }
@@ -26,6 +27,7 @@ export interface AgentRunListItem {
   status: RunStatus;
   started_at: number;
   completed_at: number | null;
+  token_totals: TokenUsageReport["totals"] | null;
 }
 
 export interface SaveOpts {
@@ -41,4 +43,5 @@ export interface SaveOpts {
   patchLog: PatchFrame[];
   errorMessage?: string;
   startedAt: number;
+  tokenUsage?: TokenUsageReport;
 }
