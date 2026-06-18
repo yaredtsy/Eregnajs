@@ -2,6 +2,7 @@ import { initWidget } from "@repo/widget";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 import { DashboardSidebar } from "#/components/dashboard/DashboardSidebar";
+import { useDashboardWidgetState } from "#/hooks/useDashboardWidgetState";
 import { useAuth } from "#/lib/auth";
 
 export const Route = createFileRoute("/dashboard")({
@@ -36,10 +37,14 @@ function DashboardShell() {
 		}
 	}, [user, loading, navigate]);
 
+	const widgetActive = !loading && Boolean(user) && !isPlayground && widgetOptions !== null;
+
 	useEffect(() => {
-		if (loading || !user || isPlayground || !widgetOptions) return;
+		if (!widgetActive || !widgetOptions) return;
 		return initWidget(widgetOptions).unmount;
-	}, [loading, user, isPlayground, widgetOptions]);
+	}, [widgetActive, widgetOptions]);
+
+	useDashboardWidgetState(widgetActive);
 
 	if (loading || !user) {
 		return (

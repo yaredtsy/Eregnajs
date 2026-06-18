@@ -1,5 +1,13 @@
 /// <reference types="vite/client" />
 
+declare global {
+	interface Window {
+		eregna?: {
+			setState(partial: Record<string, unknown>): void;
+		};
+	}
+}
+
 declare module "@repo/ui/vite-tailwind" {
 	import type { Plugin } from "vite";
 	const tailwindPlugin: () => Plugin;
