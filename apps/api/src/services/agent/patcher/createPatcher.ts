@@ -7,6 +7,7 @@ export interface Patcher {
   conversation: Conversation;
   emit(): Promise<void>;
   getLog(): PatchFrame[];
+  setOnFrame(fn: (frame: PatchFrame) => Promise<void>): void;
 }
 
 export function createPatcher(
@@ -18,6 +19,7 @@ export function createPatcher(
   const transform = makeTransformer(conv as object);
   const log: PatchFrame[] = [];
   let seq = 0;
+  let send = onFrame;
 
   async function emit(): Promise<void> {
     const rawOps = generate(observer);
@@ -26,12 +28,15 @@ export function createPatcher(
     const wireOps: WireOp[] = rawOps.map((op) => transform(op));
     const frame: PatchFrame = { seq: seq++, ops: wireOps as PatchFrame["ops"] };
     log.push(frame);
-    await onFrame(frame);
+    await send(frame);
   }
 
   return {
     conversation: conv,
     emit,
     getLog: () => log,
+    setOnFrame: (fn) => {
+      send = fn;
+    },
   };
 }

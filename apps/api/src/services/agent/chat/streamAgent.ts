@@ -1,3 +1,4 @@
+import type { BaseMessage } from "@langchain/core/messages";
 import { INTERRUPT, isInterrupted, type Command } from "@langchain/langgraph";
 import { textFromChunk } from "@repo/walkthrough-core";
 import type { ChatAgent } from "../workflow/chatAgent.js";
@@ -31,6 +32,27 @@ function extractInterruptPayload(data: unknown): ClientToolInterruptPayload | nu
   return null;
 }
 
+/** Only AI message chunks carry assistant prose (not ToolMessage resume payloads). */
+export function isAssistantStreamChunk(msg: unknown): boolean {
+  if (typeof msg !== "object" || msg === null) return false;
+  return (msg as { _getType?: () => string })._getType?.() === "ai";
+}
+
+function assertTextPart(
+  patcher: Patcher,
+  assistantMsgIndex: number,
+  textPartIndex: number,
+): void {
+  const part = patcher.conversation.messages[assistantMsgIndex]?.parts[textPartIndex];
+  if (!part || part.type !== "text") {
+    throw new Error(
+      `streamAgent: stale indices — msgCount=${patcher.conversation.messages.length}` +
+        ` assistantMsgIndex=${assistantMsgIndex}` +
+        ` partType=${part?.type ?? "missing"}`,
+    );
+  }
+}
+
 /** Stream createAgent output; emits chat events and patches conversation text. */
 export async function streamAgent(opts: StreamAgentOpts): Promise<StreamAgentResult> {
   const {
@@ -57,12 +79,22 @@ export async function streamAgent(opts: StreamAgentOpts): Promise<StreamAgentRes
     if (mode === "messages") {
       const tuple = payload as [unknown, unknown];
       const msg = tuple[0];
-      const text = textFromChunk(msg);
-      if (text) {
-        h.appendTextChunk(patcher.conversation, assistantMsgIndex, textPartIndex, text);
-        await patcher.emit();
-        await emit({ kind: "text-delta", text });
+      if (!isAssistantStreamChunk(msg)) continue;
+
+      const text = textFromChunk(msg as BaseMessage);
+      if (!text) continue;
+
+      assertTextPart(patcher, assistantMsgIndex, textPartIndex);
+      const logLen = patcher.getLog().length;
+      h.appendTextChunk(patcher.conversation, assistantMsgIndex, textPartIndex, text);
+      await patcher.emit();
+      if (patcher.getLog().length === logLen) {
+        throw new Error(
+          `streamAgent: append produced no patch ops — assistantMsgIndex=${assistantMsgIndex}` +
+            ` textPartIndex=${textPartIndex}`,
+        );
       }
+      await emit({ kind: "text-delta", text });
       continue;
     }
 

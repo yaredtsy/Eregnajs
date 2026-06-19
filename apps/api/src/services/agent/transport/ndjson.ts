@@ -6,6 +6,15 @@ export function createNdjsonStream(c: Context) {
   const writer = writable.getWriter();
   const encoder = new TextEncoder();
   let closed = false;
+  let wroteSuccessfully = false;
+  let warnedClosedWrite = false;
+
+  const warnIfDropped = (kind: string) => {
+    if (wroteSuccessfully && !warnedClosedWrite) {
+      warnedClosedWrite = true;
+      console.warn(`[eregna] ndjson: write to closed stream dropped ${kind} frame`);
+    }
+  };
 
   const markClosed = () => {
     closed = true;
@@ -24,10 +33,14 @@ export function createNdjsonStream(c: Context) {
     }),
 
     async writeFrame(frame: RunFrame): Promise<void> {
-      if (closed) return;
+      if (closed) {
+        warnIfDropped(frame.kind);
+        return;
+      }
       try {
         const line = JSON.stringify(frame) + "\n";
         await writer.write(encoder.encode(line));
+        wroteSuccessfully = true;
       } catch {
         // Client disconnected — stop writing; the run's AbortSignal will cancel upstream.
         closed = true;
@@ -35,10 +48,14 @@ export function createNdjsonStream(c: Context) {
     },
 
     async writeEvent(event: Record<string, unknown>): Promise<void> {
-      if (closed) return;
+      if (closed) {
+        warnIfDropped("chat-event");
+        return;
+      }
       try {
         const line = JSON.stringify(event) + "\n";
         await writer.write(encoder.encode(line));
+        wroteSuccessfully = true;
       } catch {
         closed = true;
       }

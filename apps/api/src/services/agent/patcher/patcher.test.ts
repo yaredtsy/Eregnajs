@@ -94,6 +94,30 @@ describe("patcher replay", () => {
     const { frames } = await simulateRun();
     expect(frames.map((f) => f.seq)).toEqual(frames.map((_, i) => i));
   });
+
+  test("setOnFrame swaps the egress without resetting observer state", async () => {
+    const runFrames: PatchFrame[] = [];
+    const resumeFrames: PatchFrame[] = [];
+    const patcher = createPatcher(initial(), async (f) => {
+      runFrames.push(structuredClone(f));
+    });
+
+    h.addUserMessage(patcher.conversation, "u1", "hi");
+    await patcher.emit();
+    expect(runFrames).toHaveLength(1);
+    expect(resumeFrames).toHaveLength(0);
+
+    patcher.setOnFrame(async (f) => {
+      resumeFrames.push(structuredClone(f));
+    });
+
+    h.addAssistantMessage(patcher.conversation, "a1");
+    await patcher.emit();
+
+    expect(runFrames).toHaveLength(1);
+    expect(resumeFrames).toHaveLength(1);
+    expect(resumeFrames[0]!.seq).toBe(1);
+  });
 });
 
 describe("isStreamablePath", () => {

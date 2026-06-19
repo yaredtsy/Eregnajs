@@ -36,6 +36,9 @@ export async function resumeChatAgent(opts: ResumeOpts): Promise<"paused" | "com
   validateResumeRequest(opts);
   const cached = lookupRun(opts.runId)!;
 
+  // Re-point the patcher at this request's stream — the /run closure writes to a closed pipe.
+  cached.patcher.setOnFrame((frame) => opts.onFrame({ kind: "patch", ...frame }));
+
   const resumeValue = opts.error
     ? { ok: false, error: opts.error }
     : { ok: true, value: opts.result };
