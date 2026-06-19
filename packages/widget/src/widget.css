@@ -101,6 +101,10 @@
   color: #64748b;
 }
 .eregna-chat-popup__header-actions { display: flex; align-items: center; gap: 4px; }
+.eregna-icon-btn--debug-on {
+  color: #818cf8;
+  background: rgba(129, 140, 248, 0.15);
+}
 
 .eregna-chat-popup__body {
   flex: 1;
@@ -293,6 +297,124 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #64748b;
+}
+
+/* ── Debug inspector (M6) ───────────────────────────────────────────────── */
+.eregna-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 2px 12px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+.eregna-inspector__section {
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(15, 23, 42, 0.45);
+}
+.eregna-inspector__heading {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+.eregna-inspector__empty {
+  margin: 0;
+  color: #64748b;
+  font-size: 11px;
+}
+.eregna-inspector__tool-list,
+.eregna-inspector__knowledge-list,
+.eregna-inspector__param-list,
+.eregna-inspector__event-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.eregna-inspector__tool-list { display: flex; flex-direction: column; gap: 10px; }
+.eregna-inspector__tool-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.eregna-inspector__tool-desc {
+  margin: 4px 0 6px;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+.eregna-inspector__badge {
+  font-size: 10px;
+  color: #64748b;
+  border: 1px solid rgba(100, 116, 139, 0.4);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.eregna-inspector__muted { color: #64748b; font-size: 11px; }
+.eregna-inspector__param-desc { color: #94a3b8; }
+.eregna-inspector__code {
+  margin: 0;
+  padding: 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.eregna-inspector__knowledge-list li {
+  padding: 6px 0;
+  border-top: 1px solid rgba(100, 116, 139, 0.2);
+}
+.eregna-inspector__knowledge-list li:first-child { border-top: none; padding-top: 0; }
+.eregna-inspector__knowledge-list p {
+  margin: 4px 0 0;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+.eregna-inspector__events-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.eregna-inspector__events-head .eregna-inspector__heading { margin: 0; }
+.eregna-inspector__events-actions { display: flex; gap: 6px; }
+.eregna-inspector__btn {
+  border: 1px solid rgba(100, 116, 139, 0.45);
+  background: rgba(30, 41, 59, 0.6);
+  color: #cbd5e1;
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.eregna-inspector__event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.eregna-inspector__event-list li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+.eregna-inspector__event-time {
+  flex: 0 0 auto;
+  color: #64748b;
+}
+.eregna-inspector__event-label {
+  color: #e2e8f0;
+  word-break: break-word;
 }
 
 /* ── Walkthrough card ─────────────────────────────────────────────────────── */

@@ -44,6 +44,8 @@ export interface WidgetState {
   /** Client tool calls for the active assistant turn. */
   toolCalls: ToolCallUiState[];
   activeMessageId: string | null;
+  /** Debug inspector replaces chat body when true (conversation state preserved). */
+  inspectorOpen: boolean;
 }
 
 export type WidgetAction =
@@ -80,6 +82,7 @@ export type WidgetAction =
   | { type: "SET_ACTIVE_MESSAGE_ID"; messageId: string | null }
   | { type: "UPSERT_TOOL_CALL"; toolCall: ToolCallUiState }
   | { type: "CLEAR_TOOL_CALLS" }
+  | { type: "TOGGLE_INSPECTOR" }
   | { type: "STOP_WALKTHROUGH" }
   | {
       type: "SET_RUNTIME_SKIP";
@@ -406,6 +409,9 @@ function reducer(state: WidgetState, action: WidgetAction): WidgetState {
     case "CLEAR_TOOL_CALLS":
       return { ...state, toolCalls: [] };
 
+    case "TOGGLE_INSPECTOR":
+      return { ...state, inspectorOpen: !state.inspectorOpen };
+
     case "STOP_RUN":
       return stopRunState(state);
 
@@ -481,6 +487,7 @@ export function WidgetProvider({
     streamActive: false,
     toolCalls: [],
     activeMessageId: null,
+    inspectorOpen: false,
     ...initialState,
   });
 

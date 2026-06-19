@@ -1,5 +1,8 @@
 import { useWidget, useWidgetDispatch } from "../../store/widget-context";
 import { useRunSession } from "../../hooks/useAgentRun";
+import { isDebugMode } from "../../api/init.js";
+import { DebugToggle } from "../header/DebugToggle";
+import { Inspector } from "../debug/Inspector";
 import { PlayerBar } from "../PlayerBar";
 import { Composer } from "../Composer";
 import { MessageList } from "./MessageList";
@@ -40,6 +43,7 @@ export function ChatPopup() {
           </div>
         </div>
         <div className="eregna-chat-popup__header-actions">
+          {isDebugMode() && <DebugToggle />}
           {state.conversation.messages.length > 0 && (
             <button
               aria-label="New chat"
@@ -78,7 +82,7 @@ export function ChatPopup() {
       </div>
 
       <div className="eregna-chat-popup__body">
-        <MessageList />
+        {state.inspectorOpen ? <Inspector /> : <MessageList />}
       </div>
 
       {isActive ? <PlayerBar /> : <Composer />}

@@ -1,5 +1,6 @@
 import { createContext, use, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { runStream } from "../chat/agent/runStream.js";
+import { appendDebugEvent, resetEventTailSession } from "../chat/debug/eventTail.js";
 import { mountReady } from "../embed/host-api.impl.js";
 import { getVisitorId } from "../embed/visitorId.js";
 import { useWidget, useWidgetDispatch } from "../store/widget-context";
@@ -86,6 +87,7 @@ export function RunSessionProvider({
               ctxRef.current.dispatch({ type: "UPSERT_TOOL_CALL", toolCall });
             },
             onChatEvent: (event) => {
+              appendDebugEvent(event);
               const d2 = ctxRef.current.dispatch;
               if (event.kind === "message-started") {
                 ctxRef.current.activeMessageId = event.messageId;
@@ -93,6 +95,9 @@ export function RunSessionProvider({
               }
             },
             onFrame: (frame) => {
+              if (frame.kind === "hello" || frame.kind === "end") {
+                appendDebugEvent(frame);
+              }
               const d2 = ctxRef.current.dispatch;
               if (typeof window !== "undefined") {
                 window.dispatchEvent(new CustomEvent("eregna:frame", { detail: frame }));
@@ -118,6 +123,7 @@ export function RunSessionProvider({
 
           const { dispatch: d } = ctxRef.current;
           d({ type: "RUN_START" });
+          resetEventTailSession();
           d({ type: "SET_PLAY_MODE", playMode: "live" });
           d({ type: "SET_MODE", mode: "bubble" });
 

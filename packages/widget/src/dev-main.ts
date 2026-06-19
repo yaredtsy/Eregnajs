@@ -1,6 +1,12 @@
 import { initWidget } from "./index.js";
 
 initWidget({
+  debug: true,
+  state: { user: "dev-user", cartCount: 0 },
+  knowledge: [
+    { title: "Returns", content: "30-day return window on all items." },
+    { title: "Shipping", content: "Free shipping on orders over $50." },
+  ],
   tools: [
     {
       name: "testTool",
