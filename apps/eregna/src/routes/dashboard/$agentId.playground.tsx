@@ -18,6 +18,7 @@ function PlaygroundPage() {
 		const { unmount } = initWidget({
 			agentPublicId: agent.public_id,
 			apiBase,
+			debug: true,
 		});
 		return unmount;
 	}, [agent?.public_id]);

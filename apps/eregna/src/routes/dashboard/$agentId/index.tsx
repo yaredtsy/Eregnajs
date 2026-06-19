@@ -38,7 +38,9 @@ function AgentEmbedPage() {
 					<p className="mb-4 text-xs text-muted-foreground">
 						Paste this inside your site's{" "}
 						<code className="font-mono text-foreground/70">&lt;body&gt;</code>{" "}
-						to activate the widget.
+						to activate the widget. Add{" "}
+						<code className="font-mono text-foreground/70">data-debug="true"</code>{" "}
+						on the script tag to enable the debug inspector.
 					</p>
 					<pre className="overflow-x-auto rounded-xl bg-[#0e0e1c] px-4 py-3 text-xs leading-relaxed text-indigo-200 font-mono border border-indigo-500/10">
 						{embedSnippet(agent.public_id)}

@@ -26,9 +26,9 @@ function DashboardShell() {
 	const widgetOptions = useMemo(() => {
 		if (!isAgentsList) return null;
 		if (guideAgentId?.trim()) {
-			return { agentPublicId: guideAgentId.trim(), apiBase };
+			return { agentPublicId: guideAgentId.trim(), apiBase, debug: true as const };
 		}
-		return {};
+		return { debug: true as const };
 	}, [isAgentsList, guideAgentId, apiBase]);
 
 	useEffect(() => {

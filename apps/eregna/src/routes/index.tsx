@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   useEffect(() => {
-    return initWidget().unmount;
+    return initWidget({ debug: import.meta.env.DEV }).unmount;
   }, []);
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-6 py-20 text-center">
