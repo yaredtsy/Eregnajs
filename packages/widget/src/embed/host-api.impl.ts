@@ -1,6 +1,8 @@
 import { setState as _setState, getState } from "./hostState.js";
-import { registerTool as _registerTool, getToolDescriptors } from "./hostTools.js";
-import { getClientToolWireDescriptors } from "../chat/tools/registry.js";
+import { registerTool as _registerTool } from "./hostTools.js";
+import { getMergedWireToolDescriptors } from "../chat/tools/wire.js";
+import type { ClientToolSpec } from "../chat/tools/types.js";
+import { registerClientTool as _registerClientTool } from "../chat/tools/registry.js";
 import { addKnowledge as _addKnowledge, getKnowledgeEntries } from "./hostKnowledge.js";
 import { configure as _configure, applyRedaction } from "./hostConfig.js";
 import { debugResolve } from "../engine/selectors.js";
@@ -15,10 +17,7 @@ type AskFn = (
 ) => Promise<void>;
 
 function getMergedToolDescriptors() {
-  const client = getClientToolWireDescriptors();
-  const legacy = getToolDescriptors();
-  const names = new Set(client.map((t) => t.name));
-  return [...client, ...legacy.filter((t) => !names.has(t.name))];
+  return getMergedWireToolDescriptors();
 }
 
 let _ask: AskFn | null = null;
@@ -62,6 +61,15 @@ export function createHostApi(): HostApi {
         return _registerTool(spec);
       } catch (err) {
         console.warn("[eregna] registerTool failed", err);
+        return () => {};
+      }
+    },
+
+    registerClientTool(spec: ClientToolSpec) {
+      try {
+        return _registerClientTool(spec);
+      } catch (err) {
+        console.warn("[eregna] registerClientTool failed", err);
         return () => {};
       }
     },

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getToolDescriptors } from "@repo/widget-internals/embed/hostTools";
+import { getMergedWireToolDescriptors } from "@repo/widget-internals/chat/tools/wire";
 import { applyRedaction } from "@repo/widget-internals/embed/hostConfig";
 import type { AgentListItem } from "#/lib/api-types";
 import { ensurePlaygroundSeed } from "./seed";
@@ -115,7 +115,7 @@ export function PlaygroundShell({ agent }: { agent: AgentListItem }) {
       pageUrl,
       query: config.query,
       hostState,
-      hostTools: getToolDescriptors(),
+      hostTools: getMergedWireToolDescriptors(),
       hostKnowledge: knowledge.map(({ title, content }) => ({ title, content })),
     };
   }, [agent.id, pageUrl, config.query, parseState, knowledge]);

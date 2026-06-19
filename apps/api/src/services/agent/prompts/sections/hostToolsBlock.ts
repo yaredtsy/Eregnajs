@@ -14,7 +14,8 @@ export const hostToolsSection: PromptSection = {
     const { text } = truncateText(list, MAX_CHARS);
     return `
 ## Available Host Tools
-The following tools are callable via the \`call-tool\` action:
+The host page registered these tools. **Call them with your tool-calling interface** when they can help — one at a time, then use the result in your reply. Do not tell the visitor to run tools manually.
+
 ${text}
 `.trim();
   },

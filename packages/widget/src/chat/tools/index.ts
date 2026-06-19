@@ -8,4 +8,4 @@ export type {
 } from "./types.js";
 export { registerClientTool, getClientTool, listClientTools, getClientToolWireDescriptors } from "./registry.js";
 export { executeClientTool, type ExecuteResult } from "./executor.js";
-export { maskSensitiveArgs, summarizeValue, DISPLAY_TRUNCATE_CHARS } from "./format.js";
+export { getMergedWireToolDescriptors } from "./wire.js";

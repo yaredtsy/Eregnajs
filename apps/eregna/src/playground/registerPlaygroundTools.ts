@@ -1,3 +1,5 @@
+import type { ClientToolSpec } from "@repo/widget-internals/chat/tools/types";
+
 export type ToolFailureMode = "off" | "throw" | "timeout";
 
 export interface ToolConfig {
@@ -70,127 +72,186 @@ function wrapTool<T>(
   };
 }
 
+function clientTool(
+  spec: Omit<ClientToolSpec, "handler" | "runsIn"> & {
+    handler: ClientToolSpec["handler"];
+  },
+  cfg: ToolConfig,
+  onLog: (entry: ToolCallLogEntry) => void,
+): ClientToolSpec {
+  const { handler, ...rest } = spec;
+  return {
+    ...rest,
+    runsIn: "client",
+    handler: wrapTool(spec.name, cfg, handler, onLog),
+  };
+}
+
+const EMPTY_PARAMS = {
+  type: "object" as const,
+  properties: {},
+  additionalProperties: false,
+};
+
 export function registerPlaygroundTools(
   configs: Record<string, ToolConfig>,
   onLog: (entry: ToolCallLogEntry) => void,
 ): () => void {
   const api = window.eregna;
-  if (!api) return () => {};
+  if (!api?.registerClientTool) return () => {};
 
   const unsubs: Array<() => void> = [];
-
   const stage = () => (window as Stage).__eregnaPlayground;
 
   if (configs.openPricingDialog?.enabled) {
     unsubs.push(
-      api.registerTool({
-        name: "openPricingDialog",
-        description: "Opens the pricing upgrade dialog",
-        parameters: { type: "object", properties: {} },
-        run: wrapTool(
-          "openPricingDialog",
-          configs.openPricingDialog,
-          () => {
-            stage()?.openPricingDialog();
-            return { opened: true };
+      api.registerClientTool(
+        clientTool(
+          {
+            name: "openPricingDialog",
+            description: "Opens the pricing upgrade dialog on the playground stage.",
+            parameters: EMPTY_PARAMS,
+            display: { icon: "💳", label: "Open pricing dialog" },
+            handler: () => {
+              stage()?.openPricingDialog();
+              return { opened: true };
+            },
           },
+          configs.openPricingDialog,
           onLog,
         ),
-      }),
+      ),
     );
   }
 
   if (configs.switchTab?.enabled) {
     unsubs.push(
-      api.registerTool({
-        name: "switchTab",
-        description: "Switch to tab a, b, or c",
-        parameters: {
-          type: "object",
-          properties: { tab: { type: "string", enum: ["a", "b", "c"] } },
-          required: ["tab"],
-        },
-        run: wrapTool(
-          "switchTab",
-          configs.switchTab,
-          (args) => {
-            const tab = String(args.tab ?? "a");
-            stage()?.switchTab(tab);
-            return { tab };
+      api.registerClientTool(
+        clientTool(
+          {
+            name: "switchTab",
+            description: "Switch the playground stage to tab a, b, or c.",
+            parameters: {
+              type: "object",
+              properties: {
+                tab: {
+                  type: "string",
+                  enum: ["a", "b", "c"],
+                  description: "Tab id to show on the playground stage.",
+                },
+              },
+              required: ["tab"],
+              additionalProperties: false,
+            },
+            display: { icon: "📑", label: "Switch tab" },
+            handler: (args) => {
+              const tab = String(args.tab ?? "a");
+              stage()?.switchTab(tab);
+              return { tab };
+            },
           },
+          configs.switchTab,
           onLog,
         ),
-      }),
+      ),
     );
   }
 
   if (configs.prefillForm?.enabled) {
     unsubs.push(
-      api.registerTool({
-        name: "prefillForm",
-        description: "Prefill the email field; invalid emails trigger validation error",
-        parameters: {
-          type: "object",
-          properties: { email: { type: "string" } },
-        },
-        run: wrapTool(
-          "prefillForm",
-          configs.prefillForm,
-          (args) => {
-            stage()?.prefillForm({ email: String(args.email ?? "") });
-            return { email: args.email };
+      api.registerClientTool(
+        clientTool(
+          {
+            name: "prefillForm",
+            description: "Prefill the demo email field on the playground form.",
+            parameters: {
+              type: "object",
+              properties: {
+                email: {
+                  type: "string",
+                  description: "Email address to place in the form field.",
+                },
+              },
+              additionalProperties: false,
+            },
+            display: { icon: "✉️", label: "Prefill form" },
+            handler: (args) => {
+              stage()?.prefillForm({ email: String(args.email ?? "") });
+              return { email: args.email };
+            },
           },
+          configs.prefillForm,
           onLog,
         ),
-      }),
+      ),
     );
   }
 
   if (configs.table_summary?.enabled) {
     unsubs.push(
-      api.registerTool({
-        name: "table_summary",
-        description: "Summarize the orders table",
-        parameters: { type: "object", properties: {} },
-        run: wrapTool(
-          "table_summary",
+      api.registerClientTool(
+        clientTool(
+          {
+            name: "table_summary",
+            description: "Summarize row and column counts in the orders table.",
+            parameters: EMPTY_PARAMS,
+            display: { icon: "📋", label: "Table summary" },
+            handler: () => stage()?.getTableSummary() ?? {},
+          },
           configs.table_summary,
-          () => stage()?.getTableSummary() ?? {},
           onLog,
         ),
-      }),
+      ),
     );
   }
 
   if (configs.table_sum_column?.enabled) {
     unsubs.push(
-      api.registerTool({
-        name: "table_sum_column",
-        description: "Sum a numeric column in the orders table",
-        parameters: {
-          type: "object",
-          properties: { column: { type: "string" } },
-          required: ["column"],
-        },
-        run: wrapTool(
-          "table_sum_column",
+      api.registerClientTool(
+        clientTool(
+          {
+            name: "table_sum_column",
+            description: "Sum a numeric column in the playground orders table.",
+            parameters: {
+              type: "object",
+              properties: {
+                column: {
+                  type: "string",
+                  description: "Column name to sum (must be numeric).",
+                },
+              },
+              required: ["column"],
+              additionalProperties: false,
+            },
+            display: { icon: "➕", label: "Sum column" },
+            handler: (args) => stage()?.sumColumn({ column: String(args.column) }) ?? 0,
+          },
           configs.table_sum_column,
-          (args) => stage()?.sumColumn({ column: String(args.column) }) ?? 0,
           onLog,
         ),
-      }),
+      ),
     );
   }
 
   if (configs.fetchUsage?.enabled) {
     unsubs.push(
-      api.registerTool({
-        name: "fetchUsage",
-        kind: "api",
-        description: "Fetch usage stats from same-origin mock API",
-        parameters: { type: "object", properties: {} },
-        endpoint: { method: "GET", url: "/api/playground-usage" },
-      }),
+      api.registerClientTool(
+        clientTool(
+          {
+            name: "fetchUsage",
+            description: "Fetch usage stats from the same-origin playground mock API.",
+            parameters: EMPTY_PARAMS,
+            display: { icon: "📊", label: "Fetch usage" },
+            handler: async () => {
+              const res = await fetch("/api/playground-usage");
+              if (!res.ok) throw new Error(`fetchUsage failed: ${res.status}`);
+              return res.json();
+            },
+          },
+          configs.fetchUsage,
+          onLog,
+        ),
+      ),
     );
   }
 

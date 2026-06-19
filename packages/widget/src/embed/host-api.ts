@@ -1,4 +1,5 @@
 import type { ToolSpec } from "./hostTools.js";
+import type { ClientToolSpec } from "../chat/tools/types.js";
 import type { PlaybackMode } from "./hostConfig.js";
 
 export interface KnowledgeInput {
@@ -10,6 +11,8 @@ export interface KnowledgeInput {
 export interface HostApi {
   setState(partial: Record<string, unknown>): void;
   registerTool(spec: ToolSpec): () => void;
+  /** Register a client-side tool (v2 — runs in the browser, `runsIn: "client"`). */
+  registerClientTool(spec: ClientToolSpec): () => void;
   addKnowledge(entry: KnowledgeInput): () => void;
   configure(opts: {
     redactKeys?: string[];

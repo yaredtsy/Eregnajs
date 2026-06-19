@@ -16,13 +16,13 @@ export function ToolsPanel({
   onChange: (name: string, patch: Partial<ToolConfig>) => void;
   callLog: ToolCallLogEntry[];
 }) {
-  console.log("Objects ", configs);
   return (
     <div className="flex flex-col gap-3 text-xs">
       <p className="text-muted-foreground">
-        Tools register through{" "}
-        <code className="text-foreground">eregna.registerTool</code> — same
-        public API as production embeds.
+        Client tools register through{" "}
+        <code className="text-foreground">eregna.registerClientTool</code> with{" "}
+        <code className="text-foreground">runsIn: &quot;client&quot;</code> — same
+        v2 wire format as <code className="text-foreground">initWidget(&#123; tools &#125;)</code>.
       </p>
       <div className="space-y-2">
         {Object.entries(configs).map(([name, cfg]) => (

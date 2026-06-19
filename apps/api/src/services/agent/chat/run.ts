@@ -38,7 +38,7 @@ export async function runChatAgent(opts: ChatRunOpts): Promise<"paused" | "compl
   const { runId, startedAt } = opts;
   const toolSpecs = extractToolSpecs(opts.hostTools as HostToolInput[] | undefined);
 
-  const initialConv: Conversation = opts.conversation
+  const bootstrapConv: Conversation = opts.conversation
     ? structuredClone(opts.conversation)
     : {
         sessionId: runId,
@@ -46,7 +46,7 @@ export async function runChatAgent(opts: ChatRunOpts): Promise<"paused" | "compl
         messages: [],
       };
 
-  const patcher = createPatcher(initialConv, (frame) =>
+  const patcher = createPatcher(bootstrapConv, (frame) =>
     opts.onFrame({ kind: "patch", ...frame }),
   );
 
@@ -54,7 +54,7 @@ export async function runChatAgent(opts: ChatRunOpts): Promise<"paused" | "compl
     kind: "hello",
     runId,
     protocol: WIRE_PROTOCOL,
-    conversation: initialConv,
+    conversation: bootstrapConv,
   });
   await emitChat(opts.onChatEvent, { kind: "run-started", runId });
 
@@ -65,22 +65,23 @@ export async function runChatAgent(opts: ChatRunOpts): Promise<"paused" | "compl
     hostTools: opts.hostTools ?? [],
     hostKnowledge: opts.hostKnowledge ?? [],
   });
+  const conv = patcher.conversation;
   const fullCtx = {
     ...ctx,
-    conversationHistory: extractHistory(initialConv),
+    conversationHistory: extractHistory(conv),
   };
-  initialConv.agentName = fullCtx.agent.name ?? initialConv.agentName;
+  conv.agentName = fullCtx.agent.name ?? conv.agentName;
 
-  h.addUserMessage(initialConv, nanoid(10), opts.query);
+  h.addUserMessage(conv, nanoid(10), opts.query);
   await patcher.emit();
 
   const messageId = nanoid(10);
-  h.addAssistantMessage(initialConv, messageId);
-  const assistantMsgIndex = initialConv.messages.length - 1;
+  h.addAssistantMessage(conv, messageId);
+  const assistantMsgIndex = conv.messages.length - 1;
   await patcher.emit();
   await emitChat(opts.onChatEvent, { kind: "message-started", messageId });
 
-  const textPartIndex = h.addTextPart(initialConv, assistantMsgIndex);
+  const textPartIndex = h.addTextPart(conv, assistantMsgIndex);
   await patcher.emit();
 
   const model = pickModel(fullCtx.agent.model);

@@ -10,7 +10,7 @@ import { WIRE_PROTOCOL } from "@repo/walkthrough-core";
 import type { Conversation, RunFrame } from "@repo/walkthrough-core";
 import type { ChatEvent } from "./chat/events.js";
 import { isAbortError } from "../../lib/abort.js";
-import { useChatAgent } from "./workflow/flags.js";
+import { shouldUseChatAgentPath } from "./workflow/flags.js";
 
 export interface RunOpts {
   agentPublicId: string;
@@ -30,7 +30,7 @@ export async function runAgent(opts: RunOpts): Promise<void> {
   const startedAt = Date.now();
   const runId = nanoid(10);
 
-  if (useChatAgent()) {
+  if (shouldUseChatAgentPath(opts.hostTools)) {
     const { runChatAgent } = await import("./chat/run.js");
     const status = await runChatAgent({ ...opts, runId, startedAt });
     if (status === "paused") return;
