@@ -1,105 +1,133 @@
-import type { RunFrame, Conversation } from "../types/conversation";
+import type { RunFrame } from "../types/conversation.js";
+import type { ChatEvent } from "./chatEvents.js";
+import { consumeAgentStream } from "./consumeStream.js";
+import { executeClientTool } from "../runtime/clientTools/executor.js";
+import { resumeStream } from "../runtime/resume.js";
+
+import type { ToolCallUiState } from "../runtime/clientTools/types.js";
 
 export interface RunStreamOptions {
   apiBase: string;
   agentPublicId: string;
   pageUrl: string;
   query: string;
-  conversation?: Conversation;
+  conversation?: import("../types/conversation.js").Conversation;
   hostState?: Record<string, unknown>;
-  hostTools?: Array<{ name: string; description: string; parameters?: Record<string, unknown> }>;
+  hostTools?: Array<{
+    name: string;
+    description: string;
+    parameters?: Record<string, unknown>;
+    runsIn?: "client" | "server";
+    display?: Record<string, unknown>;
+  }>;
   hostKnowledge?: Array<{ title: string; content: string }>;
   visitorId?: string;
   signal?: AbortSignal;
   onFrame: (frame: RunFrame) => void;
+  onChatEvent?: (event: ChatEvent) => void;
+  /** Resolve the assistant message id tool cards attach to. */
+  getMessageId?: () => string | null;
+  onToolCallUpdate?: (toolCall: ToolCallUiState) => void;
 }
 
-// No frame for this long = the run is dead (server hung, network black hole).
-const WATCHDOG_MS = 60_000;
+async function runStreamOnce(
+  url: string,
+  body: Record<string, unknown>,
+  opts: Pick<RunStreamOptions, "signal" | "onFrame" | "onChatEvent">,
+) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: opts.signal,
+  });
 
+  if (!res.ok || !res.body) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Agent request failed: ${res.status} ${text}`);
+  }
+
+  return consumeAgentStream(res.body, {
+    onFrame: opts.onFrame,
+    onChatEvent: opts.onChatEvent,
+    signal: opts.signal,
+  });
+}
+
+/** Run a full agent turn, including client-tool pause/resume loops. */
 export async function runStream(opts: RunStreamOptions): Promise<void> {
-  const controller = new AbortController();
-  const onExternalAbort = () => controller.abort();
-  opts.signal?.addEventListener("abort", onExternalAbort, { once: true });
-  if (opts.signal?.aborted) controller.abort();
-
-  let timedOut = false;
-  let watchdog: ReturnType<typeof setTimeout> | undefined;
-  const resetWatchdog = () => {
-    clearTimeout(watchdog);
-    watchdog = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, WATCHDOG_MS);
+  const runBody = {
+    agentPublicId: opts.agentPublicId,
+    pageUrl: opts.pageUrl,
+    query: opts.query,
+    conversation: opts.conversation,
+    hostState: opts.hostState,
+    hostTools: opts.hostTools,
+    hostKnowledge: opts.hostKnowledge,
+    visitorId: opts.visitorId,
   };
 
-  let endReceived = false;
-  const handleLine = (line: string) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    const parsed = JSON.parse(trimmed) as RunFrame | { seq: number };
-    // Pre-envelope servers sent bare patch frames; unknown kinds are ignored
-    // for forward compatibility.
-    const frame: RunFrame =
-      "kind" in parsed ? parsed : { kind: "patch", ...(parsed as { seq: number; ops: [] }) };
-    if (frame.kind !== "hello" && frame.kind !== "patch" && frame.kind !== "end") return;
-    if (frame.kind === "end") endReceived = true;
-    opts.onFrame(frame);
-  };
+  let outcome = await runStreamOnce(
+    `${opts.apiBase}/public/agent/run`,
+    runBody,
+    opts,
+  );
 
-  try {
-    resetWatchdog();
-    const res = await fetch(`${opts.apiBase}/public/agent/run`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        agentPublicId: opts.agentPublicId,
-        pageUrl: opts.pageUrl,
-        query: opts.query,
-        conversation: opts.conversation,
-        hostState: opts.hostState,
-        hostTools: opts.hostTools,
-        hostKnowledge: opts.hostKnowledge,
-        visitorId: opts.visitorId,
-      }),
-      signal: controller.signal,
+  let runId = outcome.runId;
+
+  while (outcome.paused && outcome.pendingToolCall) {
+    if (!runId) {
+      throw new Error("pending-tool-call without runId");
+    }
+
+    const pending = outcome.pendingToolCall;
+    const messageId = opts.getMessageId?.() ?? "unknown";
+
+    opts.onToolCallUpdate?.({
+      toolCallId: pending.toolCallId,
+      messageId,
+      name: pending.name,
+      args: pending.args,
+      status: "pending",
     });
 
-    if (!res.ok || !res.body) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`Agent run failed: ${res.status} ${text}`);
-    }
+    opts.onToolCallUpdate?.({
+      toolCallId: pending.toolCallId,
+      messageId,
+      name: pending.name,
+      args: pending.args,
+      status: "running",
+    });
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
+    const exec = await executeClientTool(pending.name, pending.args);
 
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        resetWatchdog();
+    opts.onToolCallUpdate?.({
+      toolCallId: pending.toolCallId,
+      messageId,
+      name: pending.name,
+      args: pending.args,
+      status: exec.ok ? "done" : "error",
+      result: exec.ok ? exec.value : undefined,
+      error: exec.ok ? undefined : exec.error,
+      elapsedMs: exec.elapsedMs,
+    });
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) handleLine(line);
-      }
-      if (buffer.trim()) handleLine(buffer);
-    } finally {
-      reader.releaseLock();
-    }
+    outcome = await resumeStream({
+      apiBase: opts.apiBase,
+      runId,
+      toolCallId: pending.toolCallId,
+      result: exec.ok ? exec.value : undefined,
+      error: exec.ok ? undefined : exec.error,
+      elapsedMs: exec.elapsedMs,
+      signal: opts.signal,
+      onFrame: opts.onFrame,
+      onChatEvent: opts.onChatEvent,
+    });
 
-    if (!endReceived) {
-      throw new Error("stream closed without an end frame (connection lost)");
-    }
-  } catch (err) {
-    if (timedOut) {
-      throw new Error(`stream timed out: no frames for ${WATCHDOG_MS / 1000}s`);
-    }
-    throw err;
-  } finally {
-    clearTimeout(watchdog);
-    opts.signal?.removeEventListener("abort", onExternalAbort);
+    if (outcome.runId) runId = outcome.runId;
+  }
+
+  if (!outcome.endReceived && !outcome.paused) {
+    throw new Error("stream closed without an end frame (connection lost)");
   }
 }

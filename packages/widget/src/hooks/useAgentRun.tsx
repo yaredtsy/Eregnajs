@@ -26,8 +26,20 @@ export function RunSessionProvider({
 }) {
   const { state } = useWidget();
   const dispatch = useWidgetDispatch();
-  const ctxRef = useRef({ dispatch, apiBase, agentPublicId, getConversation: () => state.conversation });
-  ctxRef.current = { dispatch, apiBase, agentPublicId, getConversation: () => state.conversation };
+  const ctxRef = useRef({
+    dispatch,
+    apiBase,
+    agentPublicId,
+    getConversation: () => state.conversation,
+    activeMessageId: null as string | null,
+  });
+  ctxRef.current = {
+    dispatch,
+    apiBase,
+    agentPublicId,
+    getConversation: () => state.conversation,
+    activeMessageId: state.activeMessageId,
+  };
 
   const controllerRef = useRef<AbortController | null>(null);
 
@@ -49,6 +61,16 @@ export function RunSessionProvider({
         const runOnce = async (q: string, signal: AbortSignal) => {
           const { apiBase: base, agentPublicId: id, getConversation } = ctxRef.current;
 
+          const resolveMessageId = (): string | null => {
+            if (ctxRef.current.activeMessageId) return ctxRef.current.activeMessageId;
+            const conv = getConversation();
+            for (let i = conv.messages.length - 1; i >= 0; i--) {
+              const msg = conv.messages[i];
+              if (msg?.role === "assistant") return msg.id;
+            }
+            return null;
+          };
+
           await runStream({
             apiBase: base,
             agentPublicId: id,
@@ -60,6 +82,17 @@ export function RunSessionProvider({
             hostKnowledge,
             visitorId: getVisitorId(),
             signal,
+            getMessageId: resolveMessageId,
+            onToolCallUpdate: (toolCall) => {
+              ctxRef.current.dispatch({ type: "UPSERT_TOOL_CALL", toolCall });
+            },
+            onChatEvent: (event) => {
+              const d2 = ctxRef.current.dispatch;
+              if (event.kind === "message-started") {
+                ctxRef.current.activeMessageId = event.messageId;
+                d2({ type: "SET_ACTIVE_MESSAGE_ID", messageId: event.messageId });
+              }
+            },
             onFrame: (frame) => {
               const d2 = ctxRef.current.dispatch;
               if (typeof window !== "undefined") {

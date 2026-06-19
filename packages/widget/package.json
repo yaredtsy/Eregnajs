@@ -21,7 +21,8 @@
     "build:all": "pnpm build && pnpm build:embed",
     "dev": "vite",
     "lint": "eslint . --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun test src"
   },
   "dependencies": {
     "@repo/walkthrough-core": "workspace:*",

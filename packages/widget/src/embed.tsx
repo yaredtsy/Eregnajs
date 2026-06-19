@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import cssText from "./widget.css?inline";
 import { WidgetRoot } from "./Widget";
 import { installGlobal } from "./embed/installGlobal.js";
+import { applyWidgetInit, type WidgetInitOptions } from "./api/init.js";
 
 // Install window.eregna synchronously so host-page scripts that run before
 // the widget mounts can call setState / registerTool without error.
@@ -11,7 +12,7 @@ if (typeof window !== "undefined") {
   installGlobal();
 }
 
-export type InitWidgetOptions = {
+export type InitWidgetOptions = WidgetInitOptions & {
   /** When omitted, a fixed-position wrapper is appended to `document.body`. */
   container?: HTMLElement;
   apiBase?: string;
@@ -24,6 +25,8 @@ export type InitWidgetResult = {
 };
 
 export function initWidget(options: InitWidgetOptions = {}): InitWidgetResult {
+  applyWidgetInit(options);
+
   const host =
     options.container ??
     (() => {

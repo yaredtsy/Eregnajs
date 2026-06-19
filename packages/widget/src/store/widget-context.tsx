@@ -16,6 +16,8 @@ import type {
 } from "../types/conversation";
 import { computeStepDuration, applyPatchFrame } from "../types/conversation";
 
+import type { ToolCallUiState } from "../runtime/clientTools/types.js";
+
 export type WidgetMode = "closed" | "bubble" | "detached";
 export type PlayMode = "history" | "live";
 // "live": steps play as frames arrive. "on-demand": frames buffer; playback
@@ -39,6 +41,9 @@ export interface WidgetState {
   runtimeSkips: Record<number, string>;
   /** True while an agent run fetch is in flight (including pre-hello). */
   streamActive: boolean;
+  /** Client tool calls for the active turn (M4 — full cards in M5). */
+  toolCalls: ToolCallUiState[];
+  activeMessageId: string | null;
 }
 
 export type WidgetAction =
@@ -72,6 +77,9 @@ export type WidgetAction =
   | { type: "RUN_START" }
   | { type: "RUN_END" }
   | { type: "STOP_RUN" }
+  | { type: "SET_ACTIVE_MESSAGE_ID"; messageId: string | null }
+  | { type: "UPSERT_TOOL_CALL"; toolCall: ToolCallUiState }
+  | { type: "CLEAR_TOOL_CALLS" }
   | { type: "STOP_WALKTHROUGH" }
   | {
       type: "SET_RUNTIME_SKIP";
@@ -376,10 +384,27 @@ function reducer(state: WidgetState, action: WidgetAction): WidgetState {
       return { ...state, driftDialog: null };
 
     case "RUN_START":
-      return { ...state, streamActive: true };
+      return { ...state, streamActive: true, toolCalls: [], activeMessageId: null };
 
     case "RUN_END":
       return { ...state, streamActive: false };
+
+    case "SET_ACTIVE_MESSAGE_ID":
+      return { ...state, activeMessageId: action.messageId };
+
+    case "UPSERT_TOOL_CALL": {
+      const idx = state.toolCalls.findIndex(
+        (t) => t.toolCallId === action.toolCall.toolCallId,
+      );
+      const toolCalls =
+        idx >= 0
+          ? state.toolCalls.map((t, i) => (i === idx ? action.toolCall : t))
+          : [...state.toolCalls, action.toolCall];
+      return { ...state, toolCalls };
+    }
+
+    case "CLEAR_TOOL_CALLS":
+      return { ...state, toolCalls: [] };
 
     case "STOP_RUN":
       return stopRunState(state);
@@ -454,6 +479,8 @@ export function WidgetProvider({
     driftDialog: null,
     runtimeSkips: {},
     streamActive: false,
+    toolCalls: [],
+    activeMessageId: null,
     ...initialState,
   });
 

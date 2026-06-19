@@ -1,5 +1,6 @@
 import { setState as _setState, getState } from "./hostState.js";
 import { registerTool as _registerTool, getToolDescriptors } from "./hostTools.js";
+import { getClientToolWireDescriptors } from "../runtime/clientTools/registry.js";
 import { addKnowledge as _addKnowledge, getKnowledgeEntries } from "./hostKnowledge.js";
 import { configure as _configure, applyRedaction } from "./hostConfig.js";
 import { debugResolve } from "../engine/selectors.js";
@@ -9,9 +10,16 @@ import type { ToolSpec } from "./hostTools.js";
 type AskFn = (
   query: string,
   hostState: Record<string, unknown>,
-  hostTools: ReturnType<typeof getToolDescriptors>,
+  hostTools: ReturnType<typeof getMergedToolDescriptors>,
   hostKnowledge: Array<{ title: string; content: string }>,
 ) => Promise<void>;
+
+function getMergedToolDescriptors() {
+  const client = getClientToolWireDescriptors();
+  const legacy = getToolDescriptors();
+  const names = new Set(client.map((t) => t.name));
+  return [...client, ...legacy.filter((t) => !names.has(t.name))];
+}
 
 let _ask: AskFn | null = null;
 let _ready = false;
@@ -120,7 +128,7 @@ export function createHostApi(): HostApi {
       await _ask(
         query,
         applyRedaction(getState()),
-        getToolDescriptors(),
+        getMergedToolDescriptors(),
         getKnowledgeEntries(),
       );
     },

@@ -1,6 +1,7 @@
 import type { Message, MessagePart } from "../../types/conversation";
 import { useWidget } from "../../store/widget-context";
 import { WalkthroughCard } from "./WalkthroughCard";
+import { ToolCallRow } from "./ToolCallRow";
 
 function Part({
   part,
@@ -18,6 +19,7 @@ function Part({
 function MessageBubble({ message }: { message: Message }) {
   const { state } = useWidget();
   const isUser = message.role === "user";
+  const toolCalls = state.toolCalls.filter((t) => t.messageId === message.id);
 
   return (
     <div
@@ -29,6 +31,9 @@ function MessageBubble({ message }: { message: Message }) {
         </div>
       )}
       <div className="eregna-msg__content">
+        {toolCalls.map((call) => (
+          <ToolCallRow key={call.toolCallId} call={call} />
+        ))}
         {message.parts.map((part, i) => (
           <Part
             key={i}
