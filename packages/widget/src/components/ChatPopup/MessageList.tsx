@@ -1,7 +1,7 @@
 import type { Message, MessagePart } from "../../types/conversation";
 import { useWidget } from "../../store/widget-context";
 import { WalkthroughCard } from "./WalkthroughCard";
-import { ToolCallRow } from "./ToolCallRow";
+import { ToolCallCard } from "../chat/ToolCallCard";
 
 function Part({
   part,
@@ -32,7 +32,7 @@ function MessageBubble({ message }: { message: Message }) {
       )}
       <div className="eregna-msg__content">
         {toolCalls.map((call) => (
-          <ToolCallRow key={call.toolCallId} call={call} />
+          <ToolCallCard key={call.toolCallId} call={call} />
         ))}
         {message.parts.map((part, i) => (
           <Part

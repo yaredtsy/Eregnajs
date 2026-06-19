@@ -170,8 +170,8 @@
   color: #64748b;
 }
 
-/* ── Client tool call (M4 minimal — M5 polishes) ─────────────────────────── */
-.eregna-tool-call {
+/* ── Client tool call card (M5) ─────────────────────────────────────────── */
+.eregna-tool-call-card {
   margin: 0 0 8px;
   padding: 8px 10px;
   border-radius: 8px;
@@ -179,40 +179,120 @@
   border: 1px solid rgba(100, 116, 139, 0.35);
   font-size: 12px;
 }
-.eregna-tool-call__header {
+.eregna-tool-call-card__header {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
-.eregna-tool-call__icon { font-size: 14px; }
-.eregna-tool-call__label { font-weight: 600; color: #e2e8f0; }
-.eregna-tool-call__status {
+.eregna-tool-call-card__icon { font-size: 14px; line-height: 1; }
+.eregna-tool-call-card__label { font-weight: 600; color: #e2e8f0; }
+.eregna-tool-call-card__status {
   text-transform: uppercase;
   font-size: 10px;
   letter-spacing: 0.04em;
   color: #94a3b8;
 }
-.eregna-tool-call--running .eregna-tool-call__status { color: #fbbf24; }
-.eregna-tool-call--done .eregna-tool-call__status { color: #34d399; }
-.eregna-tool-call--error .eregna-tool-call__status { color: #f87171; }
-.eregna-tool-call__timing { margin-left: auto; color: #64748b; font-size: 10px; }
-.eregna-tool-call__args,
-.eregna-tool-call__result {
+.eregna-tool-call-card--running .eregna-tool-call-card__status,
+.eregna-tool-call-card__status[data-status="running"] { color: #fbbf24; }
+.eregna-tool-call-card--done .eregna-tool-call-card__status,
+.eregna-tool-call-card__status[data-status="done"] { color: #34d399; }
+.eregna-tool-call-card--error .eregna-tool-call-card__status,
+.eregna-tool-call-card__status[data-status="error"] { color: #f87171; }
+.eregna-tool-call-card__timing { margin-left: auto; color: #64748b; font-size: 10px; }
+.eregna-tool-call-card__args {
+  margin: 6px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.eregna-tool-call-card__kv {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) 1fr;
+  gap: 6px 10px;
+  align-items: baseline;
+}
+.eregna-tool-call-card__kv dt {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 11px;
+}
+.eregna-tool-call-card__kv dd {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 11px;
+  word-break: break-word;
+}
+.eregna-tool-call-card__kv code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+.eregna-tool-call-card__result {
   margin: 6px 0 0;
   padding: 6px 8px;
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.25);
+}
+.eregna-tool-call-card__result-label {
+  display: block;
+  margin-bottom: 4px;
+  color: #94a3b8;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.eregna-tool-call-card__result pre {
+  margin: 0;
   color: #cbd5e1;
   font-size: 11px;
-  overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
 }
-.eregna-tool-call__error {
+.eregna-tool-call-card__expand {
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #818cf8;
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.eregna-tool-call-card__error {
   margin: 6px 0 0;
   color: #fca5a5;
   font-size: 11px;
+}
+
+/* ── Tool call card dev fixtures ─────────────────────────────────────────── */
+.eregna-tool-call-fixtures {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+  font-family: system-ui, sans-serif;
+  color: #e2e8f0;
+  background: #0f172a;
+  min-height: 100vh;
+}
+.eregna-tool-call-fixtures h1 { margin: 0 0 8px; font-size: 22px; }
+.eregna-tool-call-fixtures p { margin: 0 0 24px; color: #94a3b8; font-size: 14px; }
+.eregna-tool-call-fixtures__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.eregna-tool-call-fixtures__cell {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  background: rgba(30, 41, 59, 0.5);
+}
+.eregna-tool-call-fixtures__cell h2 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
 }
 
 /* ── Walkthrough card ─────────────────────────────────────────────────────── */

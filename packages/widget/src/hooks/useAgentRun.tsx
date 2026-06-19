@@ -1,6 +1,5 @@
 import { createContext, use, useCallback, useEffect, useRef, type ReactNode } from "react";
-import type { Conversation } from "../types/conversation";
-import { runStream } from "../agent/runStream.js";
+import { runStream } from "../chat/agent/runStream.js";
 import { mountReady } from "../embed/host-api.impl.js";
 import { getVisitorId } from "../embed/visitorId.js";
 import { useWidget, useWidgetDispatch } from "../store/widget-context";

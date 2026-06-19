@@ -1,5 +1,5 @@
-import type { RunFrame } from "../types/conversation.js";
-import { isChatEvent, type ChatEvent } from "./chatEvents.js";
+import type { RunFrame } from "../../types/conversation.js";
+import { isChatEvent, type ChatEvent } from "./events.js";
 
 export interface StreamHandlers {
   onFrame: (frame: RunFrame) => void;

@@ -1,7 +1,7 @@
-import type { RunFrame } from "../types/conversation.js";
-import type { StreamConsumeResult } from "../agent/consumeStream.js";
-import { consumeAgentStream } from "../agent/consumeStream.js";
-import type { ChatEvent } from "../agent/chatEvents.js";
+import type { RunFrame } from "../../types/conversation.js";
+import type { ChatEvent } from "../protocol/events.js";
+import type { StreamConsumeResult } from "../protocol/consumeStream.js";
+import { consumeAgentStream } from "../protocol/consumeStream.js";
 
 export interface ResumeStreamOptions {
   apiBase: string;

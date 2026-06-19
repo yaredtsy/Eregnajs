@@ -7,14 +7,9 @@ import type {
 const registry = new Map<string, RegisteredClientTool>();
 
 export function registerClientTool(spec: ClientToolSpec): () => void {
-  const entry: RegisteredClientTool = {
-    ...spec,
-    runsIn: "client",
-  };
+  const entry: RegisteredClientTool = { ...spec, runsIn: "client" };
   registry.set(spec.name, entry);
-  return () => {
-    registry.delete(spec.name);
-  };
+  return () => registry.delete(spec.name);
 }
 
 export function getClientTool(name: string): RegisteredClientTool | undefined {

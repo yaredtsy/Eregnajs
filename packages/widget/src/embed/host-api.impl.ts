@@ -1,6 +1,6 @@
 import { setState as _setState, getState } from "./hostState.js";
 import { registerTool as _registerTool, getToolDescriptors } from "./hostTools.js";
-import { getClientToolWireDescriptors } from "../runtime/clientTools/registry.js";
+import { getClientToolWireDescriptors } from "../chat/tools/registry.js";
 import { addKnowledge as _addKnowledge, getKnowledgeEntries } from "./hostKnowledge.js";
 import { configure as _configure, applyRedaction } from "./hostConfig.js";
 import { debugResolve } from "../engine/selectors.js";

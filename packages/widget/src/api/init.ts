@@ -1,8 +1,8 @@
 import { setState } from "../embed/hostState.js";
 import { addKnowledge } from "../embed/hostKnowledge.js";
 import type { KnowledgeInput } from "../embed/host-api.js";
-import { registerClientTool } from "../runtime/clientTools/registry.js";
-import type { ClientToolSpec } from "../runtime/clientTools/types.js";
+import { registerClientTool } from "../chat/tools/registry.js";
+import type { ClientToolSpec } from "../chat/tools/types.js";
 
 let debugMode = false;
 

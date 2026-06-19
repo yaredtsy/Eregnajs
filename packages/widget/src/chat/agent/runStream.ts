@@ -1,17 +1,16 @@
-import type { RunFrame } from "../types/conversation.js";
-import type { ChatEvent } from "./chatEvents.js";
-import { consumeAgentStream } from "./consumeStream.js";
-import { executeClientTool } from "../runtime/clientTools/executor.js";
-import { resumeStream } from "../runtime/resume.js";
-
-import type { ToolCallUiState } from "../runtime/clientTools/types.js";
+import type { RunFrame } from "../../types/conversation.js";
+import type { ChatEvent } from "../protocol/events.js";
+import { consumeAgentStream } from "../protocol/consumeStream.js";
+import { executeClientTool } from "../tools/executor.js";
+import { resumeStream } from "./resume.js";
+import type { ToolCallUiState } from "../tools/types.js";
 
 export interface RunStreamOptions {
   apiBase: string;
   agentPublicId: string;
   pageUrl: string;
   query: string;
-  conversation?: import("../types/conversation.js").Conversation;
+  conversation?: import("../../types/conversation.js").Conversation;
   hostState?: Record<string, unknown>;
   hostTools?: Array<{
     name: string;

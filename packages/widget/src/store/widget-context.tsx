@@ -16,7 +16,7 @@ import type {
 } from "../types/conversation";
 import { computeStepDuration, applyPatchFrame } from "../types/conversation";
 
-import type { ToolCallUiState } from "../runtime/clientTools/types.js";
+import type { ToolCallUiState } from "../chat/tools/types.js";
 
 export type WidgetMode = "closed" | "bubble" | "detached";
 export type PlayMode = "history" | "live";
@@ -41,7 +41,7 @@ export interface WidgetState {
   runtimeSkips: Record<number, string>;
   /** True while an agent run fetch is in flight (including pre-hello). */
   streamActive: boolean;
-  /** Client tool calls for the active turn (M4 — full cards in M5). */
+  /** Client tool calls for the active assistant turn. */
   toolCalls: ToolCallUiState[];
   activeMessageId: string | null;
 }
