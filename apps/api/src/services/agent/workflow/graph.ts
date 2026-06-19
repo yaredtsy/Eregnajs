@@ -1,9 +1,13 @@
 import { Annotation, StateGraph, START, END } from "@langchain/langgraph";
+import { createRequire } from "node:module";
 import type { AgentContext } from "../context/types.js";
 import type { Plan } from "../subagents/types.js";
 import type { Patcher } from "../patcher/createPatcher.js";
 import { TokenLedger } from "../telemetry/index.js";
 import { streamTextNode } from "./nodes/streamText.js";
+import { useChatAgent } from "./flags.js";
+
+const require = createRequire(import.meta.url);
 
 // Walkthrough nodes — wire back in when leaving text-chat-only test mode:
 // enrichNode, planNode, streamChapterNode, streamBodyNode, completeNode
@@ -38,7 +42,16 @@ export type GraphState = typeof GraphAnnotation.State;
 export function buildGraph() {
   // LangGraph requires every .addNode() to be reachable from START.
   // Text-chat test: only register nodes on the active path.
-  return new StateGraph(GraphAnnotation)
+  const graph = new StateGraph(GraphAnnotation);
+  if (useChatAgent()) {
+    const { chatAgentNode } = require("./nodes/chatAgent.js") as typeof import("./nodes/chatAgent.js");
+    return graph
+      .addNode("chatAgent", chatAgentNode)
+      .addEdge(START, "chatAgent")
+      .addEdge("chatAgent", END)
+      .compile();
+  }
+  return graph
     .addNode("streamText", streamTextNode)
     .addEdge(START, "streamText")
     .addEdge("streamText", END)

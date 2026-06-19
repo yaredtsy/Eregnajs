@@ -11,6 +11,8 @@ import { jsonError, ndjsonOk } from "../lib/openapi.js";
 import { ConversationSchema } from "../lib/conversationSchema.js";
 import type { Conversation } from "@repo/walkthrough-core";
 import { isAbortError } from "../lib/abort.js";
+import { ToolValidationError } from "../services/agent/tools/validate.js";
+import { parseHostTools } from "../services/agent/tools/parseHostTools.js";
 
 // The visitor-facing surface (docs/v2/3-server/06 §2). No JWT — admission is
 // public_id + per-agent origin allowlist + rate limits, all checked before
@@ -37,9 +39,18 @@ const RunBodySchema = z.object({
   hostTools: z
     .array(
       z.object({
-        name: z.string().regex(/^[a-zA-Z0-9_-]{1,40}$/),
+        name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/).max(40),
         description: z.string().max(500),
         parameters: z.record(z.unknown()).optional(),
+        runsIn: z.enum(["client", "server"]).optional(),
+        display: z
+          .object({
+            icon: z.string().optional(),
+            label: z.string().optional(),
+            showArgs: z.boolean().optional(),
+            showResult: z.boolean().optional(),
+          })
+          .optional(),
       }),
     )
     .max(MAX_TOOLS)
@@ -128,6 +139,16 @@ publicRouter.post(
     }
 
     // 4. Stream the run.
+    let hostTools = body.hostTools;
+    try {
+      hostTools = parseHostTools(body.hostTools);
+    } catch (err) {
+      if (err instanceof ToolValidationError) {
+        return c.json({ error: err.message, path: err.path }, 400);
+      }
+      throw err;
+    }
+
     const stream = createNdjsonStream(c);
     const controller = new AbortController();
     c.req.raw.signal?.addEventListener("abort", () => controller.abort());

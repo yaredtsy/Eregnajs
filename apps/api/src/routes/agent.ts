@@ -13,6 +13,8 @@ import { runAgent } from '../services/agent/run.js'
 import { ConversationSchema } from '../lib/conversationSchema.js'
 import type { Conversation } from '@repo/walkthrough-core'
 import { isAbortError } from '../lib/abort.js'
+import { ToolValidationError } from '../services/agent/tools/validate.js'
+import { parseHostTools } from '../services/agent/tools/parseHostTools.js'
 import * as runs from '../services/agent/runs/index.js'
 import { debugRouter } from './debug.js'
 
@@ -27,6 +29,15 @@ const RunBodySchema = z.object({
         name: z.string(),
         description: z.string(),
         parameters: z.record(z.unknown()).optional(),
+        runsIn: z.enum(['client', 'server']).optional(),
+        display: z
+          .object({
+            icon: z.string().optional(),
+            label: z.string().optional(),
+            showArgs: z.boolean().optional(),
+            showResult: z.boolean().optional(),
+          })
+          .optional(),
       }),
     )
     .optional(),
@@ -54,6 +65,17 @@ agentRouter.post(
   validator('json', RunBodySchema),
   async (c) => {
     const body = c.req.valid('json')
+
+    let hostTools = body.hostTools
+    try {
+      hostTools = parseHostTools(body.hostTools)
+    } catch (err) {
+      if (err instanceof ToolValidationError) {
+        return c.json({ error: err.message, path: err.path }, 400)
+      }
+      throw err
+    }
+
     const stream = createNdjsonStream(c)
     const controller = new AbortController()
 
@@ -64,7 +86,7 @@ agentRouter.post(
       pageUrl: body.pageUrl,
       query: body.query,
       hostState: body.hostState,
-      hostTools: body.hostTools,
+      hostTools,
       visitorId: body.visitorId,
       conversation: body.conversation as Conversation | undefined,
       signal: controller.signal,
