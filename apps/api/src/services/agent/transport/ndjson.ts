@@ -34,6 +34,16 @@ export function createNdjsonStream(c: Context) {
       }
     },
 
+    async writeEvent(event: Record<string, unknown>): Promise<void> {
+      if (closed) return;
+      try {
+        const line = JSON.stringify(event) + "\n";
+        await writer.write(encoder.encode(line));
+      } catch {
+        closed = true;
+      }
+    },
+
     async close(): Promise<void> {
       if (closed) return;
       closed = true;

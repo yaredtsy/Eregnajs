@@ -13,6 +13,8 @@ import type { Conversation } from "@repo/walkthrough-core";
 import { isAbortError } from "../lib/abort.js";
 import { ToolValidationError } from "../services/agent/tools/validate.js";
 import { parseHostTools } from "../services/agent/tools/parseHostTools.js";
+import { resumeChatAgent, ResumeError } from "../services/agent/chat/resume.js";
+import { validateResumeRequest } from "../services/agent/chat/validateResume.js";
 
 // The visitor-facing surface (docs/v2/3-server/06 §2). No JWT — admission is
 // public_id + per-agent origin allowlist + rate limits, all checked before
@@ -70,6 +72,14 @@ const RunBodySchema = z.object({
     ),
   visitorId: z.string().max(64).optional(),
   conversation: ConversationSchema.optional(),
+});
+
+const ResumeBodySchema = z.object({
+  runId: z.string().min(1).max(80),
+  toolCallId: z.string().min(1).max(120),
+  result: z.unknown().optional(),
+  error: z.string().max(2000).optional(),
+  elapsedMs: z.coerce.number().int().nonnegative().optional(),
 });
 
 function clientIp(c: Context): string {
@@ -158,16 +168,64 @@ publicRouter.post(
       pageUrl: body.pageUrl,
       query: body.query,
       hostState: body.hostState,
-      hostTools: body.hostTools,
+      hostTools,
       hostKnowledge: body.hostKnowledge,
       visitorId: body.visitorId,
       conversation: body.conversation as Conversation | undefined,
       signal: controller.signal,
       onFrame: (frame) => stream.writeFrame(frame),
+      onChatEvent: (event) => stream.writeEvent(event),
     })
       .catch((err) => {
         if (!controller.signal.aborted && !isAbortError(err)) {
           console.error("[public agent] run error", err);
+        }
+      })
+      .finally(() => stream.close());
+
+    return stream.response;
+  },
+);
+
+publicRouter.post(
+  "/agent/resume",
+  describeRoute({
+    tags: ["Public"],
+    responses: {
+      ...ndjsonOk,
+      ...jsonError(409, "Run not found or interrupt mismatch"),
+    },
+  }),
+  validator("json", ResumeBodySchema),
+  async (c) => {
+    const body = c.req.valid("json");
+
+    try {
+      validateResumeRequest(body);
+    } catch (err) {
+      if (err instanceof ResumeError) {
+        return c.json({ error: err.code }, 409);
+      }
+      throw err;
+    }
+
+    const stream = createNdjsonStream(c);
+    const controller = new AbortController();
+    c.req.raw.signal?.addEventListener("abort", () => controller.abort());
+
+    void resumeChatAgent({
+      runId: body.runId,
+      toolCallId: body.toolCallId,
+      result: body.result,
+      error: body.error,
+      elapsedMs: body.elapsedMs,
+      signal: controller.signal,
+      onFrame: (frame) => stream.writeFrame(frame),
+      onChatEvent: (event) => stream.writeEvent(event),
+    })
+      .catch((err) => {
+        if (!controller.signal.aborted && !isAbortError(err)) {
+          console.error("[public agent] resume error", err);
         }
       })
       .finally(() => stream.close());

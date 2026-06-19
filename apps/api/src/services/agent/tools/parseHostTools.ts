@@ -1,5 +1,5 @@
 import { ToolValidationError, validateTools } from "./validate.js";
-import type { WireToolDescriptor } from "./types.js";
+import type { ToolDescriptor, WireToolDescriptor } from "./types.js";
 
 export interface HostToolInput {
   name: string;
@@ -9,7 +9,7 @@ export interface HostToolInput {
   display?: WireToolDescriptor["display"];
 }
 
-function isV2Tool(tool: HostToolInput): boolean {
+export function isV2Tool(tool: HostToolInput): boolean {
   return (
     typeof tool.parameters === "object" &&
     tool.parameters !== null &&
@@ -27,10 +27,21 @@ function toWire(tool: HostToolInput): WireToolDescriptor {
   };
 }
 
+/** Map validated host tools to ToolDescriptor v2 for agent binding. */
+export function extractToolSpecs(tools: HostToolInput[] | undefined): ToolDescriptor[] {
+  if (!tools?.length) return [];
+  return tools.filter(isV2Tool).map((t) => ({
+    name: t.name,
+    description: t.description,
+    parameters: t.parameters as ToolDescriptor["parameters"],
+    runsIn: t.runsIn ?? "client",
+    display: t.display,
+  }));
+}
+
 /**
  * Validates v2 tool specs (JSON Schema parameters). Legacy prompt-only tools
- * without a parameters object pass through unchanged. M2: validated specs are
- * not yet bound to the agent.
+ * without a parameters object pass through unchanged.
  */
 export function parseHostTools(tools: HostToolInput[] | undefined): HostToolInput[] {
   if (!tools?.length) return [];

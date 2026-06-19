@@ -8,8 +8,9 @@ import { TokenLedger } from "./telemetry/index.js";
 import * as runs from "./runs/index.js";
 import { WIRE_PROTOCOL } from "@repo/walkthrough-core";
 import type { Conversation, RunFrame } from "@repo/walkthrough-core";
-import type { AgentContext } from "./context/types.js";
+import type { ChatEvent } from "./chat/events.js";
 import { isAbortError } from "../../lib/abort.js";
+import { useChatAgent } from "./workflow/flags.js";
 
 export interface RunOpts {
   agentPublicId: string;
@@ -22,11 +23,19 @@ export interface RunOpts {
   conversation?: Conversation;
   signal?: AbortSignal;
   onFrame: (frame: RunFrame) => Promise<void>;
+  onChatEvent?: (event: ChatEvent) => Promise<void>;
 }
 
 export async function runAgent(opts: RunOpts): Promise<void> {
   const startedAt = Date.now();
   const runId = nanoid(10);
+
+  if (useChatAgent()) {
+    const { runChatAgent } = await import("./chat/run.js");
+    const status = await runChatAgent({ ...opts, runId, startedAt });
+    if (status === "paused") return;
+    return;
+  }
 
   const initialConv: Conversation = opts.conversation
     ? structuredClone(opts.conversation)

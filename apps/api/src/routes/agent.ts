@@ -15,6 +15,8 @@ import type { Conversation } from '@repo/walkthrough-core'
 import { isAbortError } from '../lib/abort.js'
 import { ToolValidationError } from '../services/agent/tools/validate.js'
 import { parseHostTools } from '../services/agent/tools/parseHostTools.js'
+import { resumeChatAgent, ResumeError } from '../services/agent/chat/resume.js'
+import { validateResumeRequest } from '../services/agent/chat/validateResume.js'
 import * as runs from '../services/agent/runs/index.js'
 import { debugRouter } from './debug.js'
 
@@ -43,6 +45,14 @@ const RunBodySchema = z.object({
     .optional(),
   visitorId: z.string().optional(),
   conversation: ConversationSchema.optional(),
+})
+
+const ResumeBodySchema = z.object({
+  runId: z.string().min(1),
+  toolCallId: z.string().min(1),
+  result: z.unknown().optional(),
+  error: z.string().optional(),
+  elapsedMs: z.coerce.number().int().nonnegative().optional(),
 })
 
 const RunsQuerySchema = z.object({
@@ -91,10 +101,59 @@ agentRouter.post(
       conversation: body.conversation as Conversation | undefined,
       signal: controller.signal,
       onFrame: (frame) => stream.writeFrame(frame),
+      onChatEvent: (event) => stream.writeEvent(event),
     })
       .catch((err) => {
         if (!controller.signal.aborted && !isAbortError(err)) {
           console.error('[agent] run error', err)
+        }
+      })
+      .finally(() => stream.close())
+
+    return stream.response
+  },
+)
+
+agentRouter.post(
+  '/resume',
+  describeRoute({
+    tags: ['Agent runs'],
+    security: bearerSecurity,
+    responses: {
+      ...ndjsonOk,
+      ...jsonError(409, 'Run not found or interrupt mismatch'),
+    },
+  }),
+  validator('json', ResumeBodySchema),
+  async (c) => {
+    const body = c.req.valid('json')
+
+    try {
+      validateResumeRequest(body)
+    } catch (err) {
+      if (err instanceof ResumeError) {
+        return c.json({ error: err.code }, 409)
+      }
+      throw err
+    }
+
+    const stream = createNdjsonStream(c)
+    const controller = new AbortController()
+    c.req.raw.signal?.addEventListener('abort', () => controller.abort())
+
+    void resumeChatAgent({
+      runId: body.runId,
+      toolCallId: body.toolCallId,
+      result: body.result,
+      error: body.error,
+      elapsedMs: body.elapsedMs,
+      signal: controller.signal,
+      onFrame: (frame) => stream.writeFrame(frame),
+      onChatEvent: (event) => stream.writeEvent(event),
+    })
+      .catch((err) => {
+        if (!controller.signal.aborted && !isAbortError(err)) {
+          console.error('[agent] resume error', err)
         }
       })
       .finally(() => stream.close())
