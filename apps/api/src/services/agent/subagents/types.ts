@@ -1,4 +1,17 @@
+export interface PlanReasoning {
+  understanding: string;
+  knowledgeAnchors: string[];
+  componentMapping: string;
+}
+
+export interface PlanFrame {
+  planGoal: string;
+  planRationale?: string;
+  thought: string;
+}
+
 export interface Plan {
+  reasoning: PlanReasoning;
   planGoal: string;
   planRationale?: string;
   thought: string;
@@ -8,7 +21,9 @@ export interface Plan {
 export interface PlanChapter {
   title: string;
   description: string;
-  elementId: string;  // dom_id of the target element
+  elementId: string;
+  intent: "show" | "click" | "fill" | "compare";
+  expectedSteps: number;
 }
 
 export interface StepList {

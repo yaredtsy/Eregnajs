@@ -85,7 +85,7 @@ export async function runChatAgent(opts: ChatRunOpts): Promise<"paused" | "compl
   await patcher.emit();
 
   const model = pickModel(fullCtx.agent.model);
-  const agent = buildChatAgent(model, fullCtx, toolSpecs);
+  const agent = buildChatAgent(model, fullCtx, toolSpecs, patcher, () => assistantMsgIndex);
   const usageLedger = new TokenLedger();
   const threadId = runId;
   const config = { configurable: { thread_id: threadId } };

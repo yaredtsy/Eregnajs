@@ -1,22 +1,26 @@
 import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
 import type { BaseMessage } from "@langchain/core/messages";
 import type { AgentContext } from "../../context/types.js";
-import { composeSystemPrompt } from "../../prompts/index.js";
+import { composeSystemPrompt, CHAT_SECTIONS } from "../../prompts/index.js";
+
+const CHAT_MODE_SUFFIX = `
+## This turn
+Answer the visitor below using only the context above.
+Stay in chat mode — prose, not steps.
+`.trim();
 
 export function buildChatMessages(ctx: AgentContext, query: string): BaseMessage[] {
-  const messages: BaseMessage[] = [new SystemMessage(composeSystemPrompt(ctx))];
+  const system = composeSystemPrompt(ctx, CHAT_SECTIONS) + "\n\n" + CHAT_MODE_SUFFIX;
+  const messages: BaseMessage[] = [new SystemMessage(system)];
 
   for (const turn of ctx.conversationHistory) {
-    if (turn.role === "user") messages.push(new HumanMessage(turn.text));
-    else messages.push(new AIMessage(turn.text));
+    messages.push(
+      turn.role === "user" ? new HumanMessage(turn.text) : new AIMessage(turn.text),
+    );
   }
 
   messages.push(
-    new HumanMessage(
-      `Answer the visitor's question in plain text. Be concise and helpful. Do not plan a walkthrough unless they explicitly ask for step-by-step guidance on the page.
-
-Question: ${query}`,
-    ),
+    new HumanMessage(`Visitor (untrusted) says:\n\n<<<\n${query}\n>>>`),
   );
 
   return messages;

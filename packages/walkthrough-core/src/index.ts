@@ -20,6 +20,8 @@ export type {
   WalkthroughStatus,
   StepStatus,
   ChapterStatus,
+  ChapterIntent,
+  PlanReasoning,
   PopoverConfig,
   StepToolResult,
   WalkthroughChapter,

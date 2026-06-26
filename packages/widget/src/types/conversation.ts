@@ -15,6 +15,8 @@ export type {
   WalkthroughPart,
   WalkthroughAction,
   ChapterStatus,
+  ChapterIntent,
+  PlanReasoning,
   Thought,
   ThoughtPhase,
   SelectorQuery,

@@ -18,6 +18,7 @@ export async function planNode(state: GraphState): Promise<Partial<GraphState>> 
 
   const part = conv.messages[assistantMsgIndex]?.parts[walkthroughPartIndex];
   if (part?.type === "walkthrough") {
+    if (plan.reasoning) part.reasoning = plan.reasoning;
     part.planGoal = plan.planGoal;
     if (plan.planRationale) part.planRationale = plan.planRationale;
   }
@@ -34,6 +35,8 @@ export async function planNode(state: GraphState): Promise<Partial<GraphState>> 
       title: chapter.title,
       description: chapter.description,
       elementId: chapter.elementId,
+      intent: chapter.intent,
+      expectedSteps: chapter.expectedSteps,
       stepIndex: -1,
       status: "pending",
     });

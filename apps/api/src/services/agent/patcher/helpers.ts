@@ -1,4 +1,4 @@
-import type { Conversation, WalkthroughChapter, WalkthroughStep, WalkthroughAction, StepStatus, WalkthroughStatus, MessageStatus, ChapterStatus, ElementManifest, Thought, TokenUsageReport } from "@repo/walkthrough-core";
+import type { Conversation, WalkthroughChapter, WalkthroughStep, WalkthroughAction, StepStatus, WalkthroughStatus, MessageStatus, ChapterStatus, ElementManifest, Thought, TokenUsageReport, PlanReasoning } from "@repo/walkthrough-core";
 
 // Granular mutation helpers — one function per atomic change on the Conversation mirror.
 // The fast-json-patch observer on `createPatcher` sees each mutation and emits an op.
@@ -73,6 +73,87 @@ export function addWalkthroughPart(
     manifest,
   });
   return msg.parts.length - 1;
+}
+
+type WalkthroughPartSeed = {
+  walkthroughId: string;
+  planGoal: string;
+  planRationale?: string;
+  status: WalkthroughStatus;
+  chapters: WalkthroughChapter[];
+  steps: WalkthroughStep[];
+  parentContext: null;
+  thoughts: Thought[];
+  manifest?: ElementManifest;
+};
+
+export function replaceOrAddWalkthroughPart(
+  conv: Conversation,
+  messageIndex: number,
+  seed: WalkthroughPartSeed,
+): number {
+  const msg = conv.messages[messageIndex];
+  if (!msg) throw new Error(`No message at index ${messageIndex}`);
+
+  const existingIndex = msg.parts.findIndex((p) => p.type === "walkthrough");
+  if (existingIndex >= 0) {
+    const existing = msg.parts[existingIndex];
+    if (existing?.type !== "walkthrough") return existingIndex;
+    const walkthroughId = seed.walkthroughId;
+    msg.parts[existingIndex] = {
+      type: "walkthrough",
+      walkthroughId,
+      planGoal: seed.planGoal,
+      planRationale: seed.planRationale,
+      status: seed.status,
+      chapters: [],
+      steps: [],
+      parentContext: null,
+      thoughts: [],
+      manifest: seed.manifest ?? existing.manifest,
+    };
+    return existingIndex;
+  }
+
+  msg.parts.push({
+    type: "walkthrough",
+    walkthroughId: seed.walkthroughId,
+    planGoal: seed.planGoal,
+    planRationale: seed.planRationale,
+    status: seed.status,
+    chapters: seed.chapters,
+    steps: seed.steps,
+    parentContext: seed.parentContext,
+    thoughts: seed.thoughts,
+    manifest: seed.manifest,
+  });
+  return msg.parts.length - 1;
+}
+
+export function setWalkthroughReasoning(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  reasoning: PlanReasoning,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    part.reasoning = reasoning;
+  }
+}
+
+export function setPlanGoal(
+  conv: Conversation,
+  messageIndex: number,
+  partIndex: number,
+  planGoal: string,
+  planRationale?: string,
+): void {
+  const part = conv.messages[messageIndex]?.parts[partIndex];
+  if (part?.type === "walkthrough") {
+    part.planGoal = planGoal;
+    if (planRationale !== undefined) part.planRationale = planRationale;
+  }
 }
 
 export function addThought(

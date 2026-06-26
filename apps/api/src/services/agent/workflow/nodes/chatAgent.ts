@@ -26,7 +26,7 @@ export async function chatAgentNode(state: GraphState): Promise<Partial<GraphSta
   await patcher.emit();
 
   const model = pickModel(ctx.agent.model);
-  const agent = buildChatAgent(model, ctx);
+  const agent = buildChatAgent(model, ctx, [], patcher, () => msgIndex);
   const messages = buildChatAgentMessages(ctx, query);
   const collector = new UsageCollector();
 

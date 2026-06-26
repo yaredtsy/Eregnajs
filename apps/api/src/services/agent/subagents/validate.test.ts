@@ -2,7 +2,21 @@ import { describe, expect, test } from "bun:test";
 import { sanitizeStepList, validatePlanKeys, validElementKeys } from "./validate.js";
 import type { ElementRow } from "../context/types.js";
 import type { AgentContext } from "../context/types.js";
-import type { Plan } from "./types.js";
+import type { Plan, PlanChapter } from "./types.js";
+
+const sampleReasoning = {
+  understanding: "Visitor wants to save their work.",
+  knowledgeAnchors: [] as string[],
+  componentMapping: "The save button is the right target.",
+};
+
+const sampleChapter: PlanChapter = {
+  title: "a",
+  description: "d",
+  elementId: "save-btn",
+  intent: "click",
+  expectedSteps: 1,
+};
 
 function ctx(overrides: Partial<AgentContext> = {}): AgentContext {
   return {
@@ -40,18 +54,20 @@ function ctx(overrides: Partial<AgentContext> = {}): AgentContext {
 describe("validatePlanKeys", () => {
   test("accepts known keys", () => {
     const plan: Plan = {
+      reasoning: sampleReasoning,
       planGoal: "g",
       thought: "t",
-      chapters: [{ title: "a", description: "d", elementId: "save-btn" }],
+      chapters: [sampleChapter],
     };
     expect(validatePlanKeys(plan, validElementKeys(ctx()))).toBeNull();
   });
 
   test("rejects unknown keys", () => {
     const plan: Plan = {
+      reasoning: sampleReasoning,
       planGoal: "g",
       thought: "t",
-      chapters: [{ title: "a", description: "d", elementId: "missing" }],
+      chapters: [{ ...sampleChapter, elementId: "missing" }],
     };
     expect(validatePlanKeys(plan, validElementKeys(ctx()))).toContain("missing");
   });
@@ -74,7 +90,7 @@ describe("sanitizeStepList", () => {
         ],
       },
       ctx(),
-      { title: "c", description: "d", elementId: "save-btn" },
+      sampleChapter,
     );
 
     expect(result.steps[0]?.actions).toEqual([

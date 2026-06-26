@@ -1,23 +1,37 @@
 import type { AgentContext } from "../context/types.js";
 import type { PromptSection } from "./types.js";
-import { rulesSection } from "./sections/rules.js";
+import { coreRulesSection } from "./sections/coreRules.js";
+import { walkthroughRulesSection } from "./sections/walkthroughRules.js";
+import { chatRulesSection } from "./sections/chatRules.js";
 import { customerOverlaySection } from "./sections/customerOverlay.js";
 import { pageContextSection } from "./sections/pageContext.js";
+import { pageElementsSummarySection } from "./sections/pageElementsSummary.js";
 import { elementsTreeSection } from "./sections/elementsTree.js";
 import { hostStateSection } from "./sections/hostStateBlock.js";
-import { hostToolsSection } from "./sections/hostToolsBlock.js";
 import { knowledgeSection } from "./sections/knowledgeBlock.js";
 import { estimateTokens } from "./util/budget.js";
 
-const DEFAULT_SECTIONS: PromptSection[] = [
-  rulesSection,
+export const PLANNER_SECTIONS: PromptSection[] = [
+  coreRulesSection,
+  walkthroughRulesSection,
   customerOverlaySection,
   pageContextSection,
   elementsTreeSection,
   knowledgeSection,
   hostStateSection,
-  hostToolsSection,
 ];
+
+export const CHAT_SECTIONS: PromptSection[] = [
+  coreRulesSection,
+  chatRulesSection,
+  customerOverlaySection,
+  knowledgeSection,
+  pageContextSection,
+  pageElementsSummarySection,
+  hostStateSection,
+];
+
+const DEFAULT_SECTIONS = PLANNER_SECTIONS;
 
 export interface PromptSectionInfo {
   name: string;
