@@ -22,7 +22,7 @@ function toWire(tool: HostToolInput): WireToolDescriptor {
     name: tool.name,
     description: tool.description,
     parameters: tool.parameters as WireToolDescriptor["parameters"],
-    runsIn: tool.runsIn,
+    runsIn: tool.runsIn ?? "client",
     display: tool.display,
   };
 }

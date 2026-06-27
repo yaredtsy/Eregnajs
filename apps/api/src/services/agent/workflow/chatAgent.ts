@@ -64,6 +64,7 @@ export function buildChatAgent(
       : []),
   ];
 
+
   const systemPrompt =
     composeSystemPrompt(ctx, CHAT_SECTIONS) + "\n\n" + CHAT_MODE_SUFFIX;
 

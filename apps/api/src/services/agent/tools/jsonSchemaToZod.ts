@@ -32,7 +32,10 @@ function schemaForProperty(prop: JSONSchema, path: string): ZodTypeAny {
 }
 
 /** Convert a JSON Schema object to a Zod schema for LangChain tool binding. */
-export function jsonSchemaToZod(schema: JSONSchema, path = "parameters"): z.ZodObject<z.ZodRawShape> {
+export function jsonSchemaToZod(
+  schema: JSONSchema,
+  path = "parameters",
+): z.ZodObject<z.ZodRawShape, z.UnknownKeysParam> {
   if (schema.type && schema.type !== "object") {
     throw new Error(`${path}: root schema must be type "object"`);
   }
@@ -50,9 +53,6 @@ export function jsonSchemaToZod(schema: JSONSchema, path = "parameters"): z.ZodO
     shape[key] = field;
   }
 
-  let obj = z.object(shape);
-  if (schema.additionalProperties === false) {
-    obj = obj.strict();
-  }
-  return obj;
+  const obj = z.object(shape);
+  return schema.additionalProperties === false ? obj.strict() : obj;
 }

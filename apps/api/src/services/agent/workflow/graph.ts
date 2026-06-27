@@ -21,16 +21,16 @@ const require = createRequire(import.meta.url);
 const graphPlaceholder = <T>(): T => null as unknown as T;
 
 export const GraphAnnotation = Annotation.Root({
-  query:                Annotation<string>({ reducer: (_, n) => n, default: () => "" }),
-  ctx:                  Annotation<AgentContext>({ reducer: (_, n) => n, default: graphPlaceholder }),
-  patcher:              Annotation<Patcher>({ reducer: (_, n) => n, default: graphPlaceholder }),
-  assistantMsgIndex:    Annotation<number>({ reducer: (_, n) => n, default: () => -1 }),
+  query: Annotation<string>({ reducer: (_, n) => n, default: () => "" }),
+  ctx: Annotation<AgentContext>({ reducer: (_, n) => n, default: graphPlaceholder }),
+  patcher: Annotation<Patcher>({ reducer: (_, n) => n, default: graphPlaceholder }),
+  assistantMsgIndex: Annotation<number>({ reducer: (_, n) => n, default: () => -1 }),
   walkthroughPartIndex: Annotation<number>({ reducer: (_, n) => n, default: () => -1 }),
-  plan:                 Annotation<Plan | null>({ reducer: (_, n) => n, default: () => null }),
-  chapterIndex:         Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
-  stepIndexInChapter:   Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
-  globalStepOffset:     Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
-  usageLedger:          Annotation<TokenLedger>({ reducer: (_, n) => n, default: () => new TokenLedger() }),
+  plan: Annotation<Plan | null>({ reducer: (_, n) => n, default: () => null }),
+  chapterIndex: Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
+  stepIndexInChapter: Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
+  globalStepOffset: Annotation<number>({ reducer: (_, n) => n, default: () => 0 }),
+  usageLedger: Annotation<TokenLedger>({ reducer: (_, n) => n, default: () => new TokenLedger() }),
 });
 
 export type GraphState = typeof GraphAnnotation.State;
@@ -43,6 +43,7 @@ export function buildGraph() {
   // LangGraph requires every .addNode() to be reachable from START.
   // Text-chat test: only register nodes on the active path.
   const graph = new StateGraph(GraphAnnotation);
+  console.log("buildGraph", useChatAgent());
   if (useChatAgent()) {
     const { chatAgentNode } = require("./nodes/chatAgent.js") as typeof import("./nodes/chatAgent.js");
     return graph

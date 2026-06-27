@@ -13,8 +13,10 @@ export function startWalkthroughTool(
   patcher: Patcher,
   getAssistantMsgIndex: () => number,
 ) {
+
   return tool(
     async ({ goal }: { goal: string }) => {
+
       const msgIndex = getAssistantMsgIndex();
       const partIndex = h.replaceOrAddWalkthroughPart(patcher.conversation, msgIndex, {
         walkthroughId: `wt_${nanoid(10)}`,
@@ -63,7 +65,7 @@ export function startWalkthroughTool(
       schema: z.object({
         goal: z.string().min(8).max(280).describe(
           "One sentence describing what the tour should accomplish, " +
-            "phrased as an outcome the visitor will reach.",
+          "phrased as an outcome the visitor will reach.",
         ),
       }),
     },

@@ -1,8 +1,8 @@
 import { createMiddleware } from "langchain";
 import { interrupt } from "@langchain/langgraph";
 import { ToolMessage } from "@langchain/core/messages";
-import type { ToolDescriptor } from "../tools/types.js";
-import type { ClientToolInterruptPayload } from "../chat/events.js";
+import type { ToolDescriptor } from "../../tools/types.js";
+import type { ClientToolInterruptPayload } from "../../chat/events.js";
 
 export function createClientToolInterruptMiddleware(specs: ToolDescriptor[]) {
   const specByName = new Map(specs.map((s) => [s.name, s]));

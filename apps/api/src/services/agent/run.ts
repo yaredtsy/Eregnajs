@@ -9,6 +9,7 @@ import * as runs from "./runs/index.js";
 import { WIRE_PROTOCOL } from "@repo/walkthrough-core";
 import type { Conversation, RunFrame } from "@repo/walkthrough-core";
 import type { ChatEvent } from "./chat/events.js";
+import type { AgentContext } from "./context/types.js";
 import { isAbortError } from "../../lib/abort.js";
 import { shouldUseChatAgentPath } from "./workflow/flags.js";
 

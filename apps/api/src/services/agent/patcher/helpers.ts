@@ -99,10 +99,14 @@ export function replaceOrAddWalkthroughPart(
   if (existingIndex >= 0) {
     const existing = msg.parts[existingIndex];
     if (existing?.type !== "walkthrough") return existingIndex;
-    const walkthroughId = seed.walkthroughId;
+    // Re-plan on the same message: keep the prior walkthroughId so any
+    // visitor-side UI state keyed to it (reasoning disclosure open/closed
+    // in sessionStorage) survives the swap. Only one walkthrough per
+    // message in phase 1; if the goal changed the planner overwrites the
+    // body, but the id stays stable.
     msg.parts[existingIndex] = {
       type: "walkthrough",
-      walkthroughId,
+      walkthroughId: existing.walkthroughId,
       planGoal: seed.planGoal,
       planRationale: seed.planRationale,
       status: seed.status,
