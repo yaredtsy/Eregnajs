@@ -38,6 +38,14 @@ export function isAssistantStreamChunk(msg: unknown): boolean {
   return (msg as { _getType?: () => string })._getType?.() === "ai";
 }
 
+/** Drop planner-internal structured-output tokens from the visitor wire stream. */
+export function isPlannerInternalChunk(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== "object") return false;
+  const tags = (metadata as { tags?: unknown }).tags;
+  if (!Array.isArray(tags)) return false;
+  return tags.includes("planner-internal");
+}
+
 function assertTextPart(
   patcher: Patcher,
   assistantMsgIndex: number,
@@ -79,7 +87,9 @@ export async function streamAgent(opts: StreamAgentOpts): Promise<StreamAgentRes
     if (mode === "messages") {
       const tuple = payload as [unknown, unknown];
       const msg = tuple[0];
+      const metadata = tuple[1];
       if (!isAssistantStreamChunk(msg)) continue;
+      if (isPlannerInternalChunk(metadata)) continue;
 
       const text = textFromChunk(msg as BaseMessage);
       if (!text) continue;

@@ -26,8 +26,11 @@ export const PlanFrameSchema = z.object({
     "One sentence goal of the entire walkthrough. Shown above the " +
       "checklist. Visitor-facing — concrete and outcome-oriented.",
   ),
-  planRationale: z.string().max(280).optional().describe(
-    "Optional: why this plan over alternatives. Omit when obvious.",
+  // .nullable() (not .optional()) because OpenAI's strict structured-output
+  // mode requires every property to be in required[]. The model writes null
+  // when no rationale is needed; the consumer treats null as "omit".
+  planRationale: z.string().max(280).nullable().describe(
+    "Why this plan over alternatives. Use null when obvious.",
   ),
   thought: z.string().min(1).max(200).describe(
     "Short ticker line for the live UI — the 'what I'm about to do' " +

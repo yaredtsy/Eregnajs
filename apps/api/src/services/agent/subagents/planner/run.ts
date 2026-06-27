@@ -38,6 +38,10 @@ export interface PlannerRunOpts {
   partIndex?: number;
 }
 
+const PLANNER_INTERNAL_CONFIG = {
+  tags: ["planner-internal"],
+} as const;
+
 async function invokeStructured<T>(
   model: BaseChatModel,
   schema: z.ZodType<T>,
@@ -53,9 +57,12 @@ async function invokeStructured<T>(
       label,
       model: modelName,
       meta,
+      config: PLANNER_INTERNAL_CONFIG,
     })) as T;
   }
-  return (await model.withStructuredOutput(schema).invoke(messages)) as T;
+  return (await model
+    .withStructuredOutput(schema)
+    .invoke(messages, PLANNER_INTERNAL_CONFIG)) as T;
 }
 
 function emitPlanThought(
@@ -103,15 +110,21 @@ export async function runPlannerDetailed(
     systemMessage,
     new HumanMessage(buildReasoningPrompt(ctx, goal)),
   ];
-  const reasoning = (await invokeStructured<PlanReasoning>(
-    model,
-    PlanReasoningSchema,
-    reasoningMessages,
-    opts,
-    "planner-reason",
-    ctx.agent.model,
-    { stage: 1 },
-  )) as PlanReasoning;
+  let reasoning: PlanReasoning;
+  try {
+    reasoning = (await invokeStructured<PlanReasoning>(
+      model,
+      PlanReasoningSchema,
+      reasoningMessages,
+      opts,
+      "planner-reason",
+      ctx.agent.model,
+      { stage: 1 },
+    )) as PlanReasoning;
+  } catch (err) {
+    console.error("[planner] stage 1 (reason) threw:", err);
+    throw err;
+  }
 
   if (opts?.patcher && opts.msgIndex !== undefined && opts.partIndex !== undefined) {
     h.setWalkthroughReasoning(opts.patcher.conversation, opts.msgIndex, opts.partIndex, reasoning);
@@ -124,15 +137,21 @@ export async function runPlannerDetailed(
     new AIMessage(formatReasoningAsPrior(reasoning)),
     new HumanMessage(buildFramePrompt(goal)),
   ];
-  const frame = (await invokeStructured<PlanFrame>(
-    model,
-    PlanFrameSchema,
-    frameMessages,
-    opts,
-    "planner-frame",
-    ctx.agent.model,
-    { stage: 2 },
-  )) as PlanFrame;
+  let frame: PlanFrame;
+  try {
+    frame = (await invokeStructured<PlanFrame>(
+      model,
+      PlanFrameSchema,
+      frameMessages,
+      opts,
+      "planner-frame",
+      ctx.agent.model,
+      { stage: 2 },
+    )) as PlanFrame;
+  } catch (err) {
+    console.error("[planner] stage 2 (frame) threw:", err);
+    throw err;
+  }
 
   if (opts?.patcher && opts.msgIndex !== undefined && opts.partIndex !== undefined) {
     h.setPlanGoal(
@@ -140,7 +159,7 @@ export async function runPlannerDetailed(
       opts.msgIndex,
       opts.partIndex,
       frame.planGoal,
-      frame.planRationale,
+      frame.planRationale ?? undefined,
     );
     h.addThought(opts.patcher.conversation, opts.msgIndex, opts.partIndex, {
       id: nanoid(8),
@@ -174,13 +193,24 @@ export async function runPlannerDetailed(
     return result.chapters;
   };
 
-  let chapters = await invokeChapters();
+  let chapters;
+  try {
+    chapters = await invokeChapters();
+  } catch (err) {
+    console.error("[planner] stage 3 (chapters) threw:", err);
+    throw err;
+  }
   let plan: Plan = { reasoning, ...frame, chapters };
   let validationError = validatePlanKeys(plan, keys);
 
   if (validationError) {
     repairAttempted = true;
-    chapters = await invokeChapters(validationError, 2);
+    try {
+      chapters = await invokeChapters(validationError, 2);
+    } catch (err) {
+      console.error("[planner] stage 3 (chapters, repair) threw:", err);
+      throw err;
+    }
     plan = { reasoning, ...frame, chapters };
     validationError = validatePlanKeys(plan, keys);
   }

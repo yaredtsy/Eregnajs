@@ -1,5 +1,6 @@
 import type { BaseMessage } from "@langchain/core/messages";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import type { RunnableConfig } from "@langchain/core/runnables";
 import { textFromChunk } from "@repo/walkthrough-core";
 import type { z } from "zod";
 import { UsageCollector } from "./collector.js";
@@ -12,6 +13,7 @@ import type { TokenUsageCounts } from "@repo/walkthrough-core";
 export interface TrackOpts extends RecordOpts {
   ledger: TokenLedger;
   label: string;
+  config?: RunnableConfig;
 }
 
 /** Invoke structured output and record each LLM end on the ledger. */
@@ -23,7 +25,10 @@ export async function trackStructuredInvoke<T>(
 ): Promise<T> {
   const collector = new UsageCollector();
   const structured = model.withStructuredOutput(schema);
-  const result = await structured.invoke(messages, { callbacks: [collector] });
+  const result = await structured.invoke(messages, {
+    ...(opts.config ?? {}),
+    callbacks: [collector],
+  });
 
   for (const usage of collector.drain()) {
     opts.ledger.record(opts.label, usage, opts);

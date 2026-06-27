@@ -99,6 +99,12 @@ export function replaceOrAddWalkthroughPart(
   if (existingIndex >= 0) {
     const existing = msg.parts[existingIndex];
     if (existing?.type !== "walkthrough") return existingIndex;
+    if (existing.status === "planning") {
+      throw new Error(
+        "replaceOrAddWalkthroughPart: another planner is mid-run on " +
+          "this message; refusing to clobber its state.",
+      );
+    }
     // Re-plan on the same message: keep the prior walkthroughId so any
     // visitor-side UI state keyed to it (reasoning disclosure open/closed
     // in sessionStorage) survives the swap. Only one walkthrough per

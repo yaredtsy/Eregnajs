@@ -47,6 +47,7 @@ export function startWalkthroughTool(
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        console.error("[start_walkthrough] runPlanner threw:", err);
         h.setWalkthroughStatus(patcher.conversation, msgIndex, partIndex, "error");
         await patcher.emit();
         return JSON.stringify({

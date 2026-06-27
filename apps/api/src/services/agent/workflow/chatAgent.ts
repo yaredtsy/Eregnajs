@@ -1,8 +1,10 @@
 import { createAgent, tool } from "langchain";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { ChatOpenAI } from "@langchain/openai";
 import { AIMessage, HumanMessage, type BaseMessage } from "@langchain/core/messages";
 import type { AgentContext } from "../context/types.js";
 import { composeSystemPrompt, CHAT_SECTIONS } from "../prompts/index.js";
+import { bindOrchestratorOptions } from "../llm/openai.js";
 import { getCheckpointer } from "./checkpointer.js";
 import type { ToolDescriptor } from "../tools/types.js";
 import { jsonSchemaToZod } from "../tools/jsonSchemaToZod.js";
@@ -53,6 +55,8 @@ export function buildChatAgent(
   const tools = [
     ...hostTools,
     ...(patcher && getAssistantMsgIndex
+      // Raw model — planner structured-output calls must not carry
+      // parallel_tool_calls (see docs/v2/11-walkthrough/fixes/03).
       ? [startWalkthroughTool(model, ctx, patcher, getAssistantMsgIndex)]
       : []),
   ];
@@ -68,8 +72,12 @@ export function buildChatAgent(
   const systemPrompt =
     composeSystemPrompt(ctx, CHAT_SECTIONS) + "\n\n" + CHAT_MODE_SUFFIX;
 
+  // parallel_tool_calls only on orchestrator turns (tools present); planner uses raw model.
+  const orchestratorModel =
+    model instanceof ChatOpenAI ? bindOrchestratorOptions(model) : model;
+
   return createAgent({
-    model,
+    model: orchestratorModel,
     tools,
     systemPrompt,
     middleware,

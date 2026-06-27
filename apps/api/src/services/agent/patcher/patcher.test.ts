@@ -133,3 +133,27 @@ describe("isStreamablePath", () => {
     expect(isStreamablePath("/sessionId")).toBe(false);
   });
 });
+
+function planningSeed(walkthroughId: string) {
+  return {
+    walkthroughId,
+    planGoal: "test goal",
+    status: "planning" as const,
+    chapters: [],
+    steps: [],
+    parentContext: null,
+    thoughts: [],
+  };
+}
+
+describe("replaceOrAddWalkthroughPart", () => {
+  test("rejects a concurrent planner", () => {
+    const conv = initial();
+    h.addAssistantMessage(conv, "m1");
+    const msgIdx = conv.messages.length - 1;
+    h.replaceOrAddWalkthroughPart(conv, msgIdx, planningSeed("wt-A"));
+    expect(() =>
+      h.replaceOrAddWalkthroughPart(conv, msgIdx, planningSeed("wt-B")),
+    ).toThrow(/another planner is mid-run/);
+  });
+});

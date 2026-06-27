@@ -6,14 +6,18 @@ export interface PlanReasoning {
 
 export interface PlanFrame {
   planGoal: string;
-  planRationale?: string;
+  // null (not undefined) because the planner schema uses .nullable() for
+  // OpenAI strict structured-output compatibility. The model writes null
+  // when no rationale is warranted; convert to undefined at the patcher
+  // boundary.
+  planRationale: string | null;
   thought: string;
 }
 
 export interface Plan {
   reasoning: PlanReasoning;
   planGoal: string;
-  planRationale?: string;
+  planRationale: string | null;
   thought: string;
   chapters: PlanChapter[];
 }
